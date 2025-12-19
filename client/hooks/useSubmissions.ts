@@ -1,86 +1,84 @@
-import { useState, useEffect, useCallback } from "react";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { getApiUrl, apiRequest } from "@/lib/query-client";
+import { File } from "expo-file-system";
 
 export interface Submission {
   id: string;
-  photoUri: string;
+  photoUrl: string;
   overlayId: string | null;
-  caption: string;
+  caption: string | null;
   status: "pending" | "posted";
+  clientId: string | null;
   createdAt: string;
 }
 
-const STORAGE_KEY = "@photo_portal_submissions";
-
 export function useSubmissions() {
-  const [submissions, setSubmissions] = useState<Submission[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const queryClient = useQueryClient();
 
-  const loadSubmissions = useCallback(async () => {
-    try {
-      const stored = await AsyncStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored) as Submission[];
-        setSubmissions(parsed.sort((a, b) => 
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-        ));
+  const { data: submissions = [], isLoading, refetch } = useQuery<Submission[]>({
+    queryKey: ["/api/submissions"],
+    staleTime: 1000 * 60 * 5,
+  });
+
+  const addSubmissionMutation = useMutation({
+    mutationFn: async ({
+      photoUri,
+      overlayId,
+      caption,
+    }: {
+      photoUri: string;
+      overlayId: string | null;
+      caption: string;
+    }) => {
+      const baseUrl = getApiUrl();
+      const formData = new FormData();
+
+      const file = new File(photoUri);
+      formData.append("photo", file as unknown as Blob);
+
+      if (overlayId) {
+        formData.append("overlayId", overlayId);
       }
-    } catch (error) {
-      console.error("Failed to load submissions:", error);
-    }
-  }, []);
+      if (caption) {
+        formData.append("caption", caption);
+      }
 
-  const refreshSubmissions = useCallback(async () => {
-    setIsLoading(true);
-    await loadSubmissions();
-    setIsLoading(false);
-  }, [loadSubmissions]);
+      const response = await fetch(new URL("/api/submissions", baseUrl).href, {
+        method: "POST",
+        body: formData,
+        credentials: "include",
+      });
 
-  const addSubmission = useCallback(async (
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(`Failed to submit: ${text}`);
+      }
+
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/submissions"] });
+    },
+  });
+
+  const addSubmission = async (
     photoUri: string,
     overlayId: string | null,
     caption: string
   ): Promise<Submission> => {
-    const newSubmission: Submission = {
-      id: Date.now().toString() + Math.random().toString(36).substring(2, 9),
-      photoUri,
-      overlayId,
-      caption,
-      status: "pending",
-      createdAt: new Date().toISOString(),
-    };
-
-    try {
-      const stored = await AsyncStorage.getItem(STORAGE_KEY);
-      const existing = stored ? JSON.parse(stored) : [];
-      const updated = [newSubmission, ...existing];
-      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-      setSubmissions(updated);
-      return newSubmission;
-    } catch (error) {
-      console.error("Failed to save submission:", error);
-      throw error;
-    }
-  }, []);
-
-  const clearSubmissions = useCallback(async () => {
-    try {
-      await AsyncStorage.removeItem(STORAGE_KEY);
-      setSubmissions([]);
-    } catch (error) {
-      console.error("Failed to clear submissions:", error);
-    }
-  }, []);
-
-  useEffect(() => {
-    loadSubmissions();
-  }, [loadSubmissions]);
+    return addSubmissionMutation.mutateAsync({ photoUri, overlayId, caption });
+  };
 
   return {
     submissions,
     isLoading,
-    refreshSubmissions,
+    refreshSubmissions: refetch,
     addSubmission,
-    clearSubmissions,
+    isSubmitting: addSubmissionMutation.isPending,
   };
+}
+
+export function getSubmissionPhotoUrl(photoUrl: string): string {
+  const baseUrl = getApiUrl();
+  return new URL(photoUrl, baseUrl).href;
 }

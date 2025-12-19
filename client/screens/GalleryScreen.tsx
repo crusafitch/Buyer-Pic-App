@@ -14,7 +14,7 @@ import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import { useTheme } from "@/hooks/useTheme";
 import { BorderRadius, Colors, Spacing } from "@/constants/theme";
-import { useSubmissions, Submission } from "@/hooks/useSubmissions";
+import { useSubmissions, Submission, getSubmissionPhotoUrl } from "@/hooks/useSubmissions";
 import { Feather } from "@expo/vector-icons";
 
 const { width } = Dimensions.get("window");
@@ -50,7 +50,7 @@ function SubmissionCard({ item }: { item: Submission }) {
 
   return (
     <View style={[styles.card, { backgroundColor: theme.backgroundDefault }]}>
-      <Image source={{ uri: item.photoUri }} style={styles.cardImage} />
+      <Image source={{ uri: getSubmissionPhotoUrl(item.photoUrl) }} style={styles.cardImage} />
       <View style={styles.cardContent}>
         <ThemedText type="small" style={{ color: theme.textSecondary }}>
           {formattedDate}
