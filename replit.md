@@ -2,7 +2,7 @@
 
 ## Overview
 
-Photo Portal is a B2B mobile application built with React Native (Expo) that allows advertising agency clients to submit photos with branded overlays. The app features a camera interface for capturing photos, overlay selection, preview/caption functionality, and a gallery to track submission history. It follows a client-server architecture with an Express.js backend.
+Photo Portal is a B2B mobile application built with React Native (Expo) that allows advertising agency clients to submit photos and videos with branded overlays (photos only). The app features a camera interface for capturing photos/videos, overlay selection, AI-powered caption generation, preview/caption functionality, and a gallery to track submission history. It follows a client-server architecture with an Express.js backend.
 
 ## User Preferences
 
@@ -60,8 +60,10 @@ assets/          # Images, icons, overlays
 
 ### Third-Party Services & APIs
 - **Authentication** (Planned): Apple Sign-In, Google Sign-In for client identification
-- **Camera/Media**: `expo-camera` for photo capture, `expo-image-picker` for gallery access
+- **Camera/Media**: `expo-camera` for photo/video capture, `expo-image-picker` for gallery access
+- **Video Playback**: `expo-video` for video preview and playback in gallery
 - **Image Processing**: `react-native-view-shot` for capturing composited photo+overlay
+- **AI Integration**: OpenAI GPT-4o Vision API (via Replit AI Integrations) for generating social media captions from photos
 
 ### Database
 - **PostgreSQL**: Primary database (configured via `DATABASE_URL` environment variable)
@@ -77,3 +79,12 @@ assets/          # Images, icons, overlays
 - `DATABASE_URL`: PostgreSQL connection string
 - `EXPO_PUBLIC_DOMAIN`: API server domain for client requests
 - `REPLIT_DEV_DOMAIN`: Development domain for CORS configuration
+- `AI_INTEGRATIONS_OPENAI_API_KEY`: OpenAI API key (managed by Replit AI Integrations)
+- `AI_INTEGRATIONS_OPENAI_BASE_URL`: OpenAI base URL (managed by Replit AI Integrations)
+
+## Recent Changes
+
+- Added video recording and playback support (photos and videos can now be captured and submitted)
+- Added AI-powered caption generation for photos using OpenAI Vision API
+- Videos display with play button overlay in gallery and can be played in fullscreen modal
+- Overlays are only available for photos (disabled for videos)
