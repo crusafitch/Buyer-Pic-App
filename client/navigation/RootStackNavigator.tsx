@@ -9,7 +9,7 @@ import { useScreenOptions } from "@/hooks/useScreenOptions";
 export type RootStackParamList = {
   Main: undefined;
   OverlaySelect: { photoUri: string };
-  Preview: { photoUri: string; overlayId: string | null };
+  Preview: { photoUri: string; overlayId: string | null; overlayUrl?: string };
   Success: undefined;
 };
 

@@ -5,6 +5,7 @@ import {
   ScrollView,
   Pressable,
   Dimensions,
+  ActivityIndicator,
 } from "react-native";
 import { Image } from "expo-image";
 import { useHeaderHeight } from "@react-navigation/elements";
@@ -20,26 +21,13 @@ import { Button } from "@/components/Button";
 import { useTheme } from "@/hooks/useTheme";
 import { BorderRadius, Spacing } from "@/constants/theme";
 import { RootStackParamList } from "@/navigation/RootStackNavigator";
+import { useOverlays, getOverlayImageUrl } from "@/hooks/useOverlays";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 type RouteType = RouteProp<RootStackParamList, "OverlaySelect">;
 
 const { width } = Dimensions.get("window");
 const PREVIEW_SIZE = width - Spacing.xl * 2;
-
-interface OverlayOption {
-  id: string;
-  name: string;
-  source: any;
-}
-
-const overlays: OverlayOption[] = [
-  { id: "confetti", name: "Celebration", source: require("../../assets/overlays/confetti.png") },
-  { id: "frame", name: "Classic Frame", source: require("../../assets/overlays/frame.png") },
-  { id: "star", name: "Star", source: require("../../assets/overlays/star.png") },
-  { id: "ribbon", name: "Ribbon", source: require("../../assets/overlays/ribbon.png") },
-  { id: "geometric", name: "Modern", source: require("../../assets/overlays/geometric.png") },
-];
 
 export default function OverlaySelectScreen() {
   const { theme } = useTheme();
@@ -49,18 +37,21 @@ export default function OverlaySelectScreen() {
   const route = useRoute<RouteType>();
   const { photoUri } = route.params;
 
-  const [selectedOverlay, setSelectedOverlay] = useState<string | null>(null);
+  const { data: overlays, isLoading } = useOverlays();
+  const [selectedOverlayId, setSelectedOverlayId] = useState<string | null>(null);
 
   const handleSelectOverlay = (overlayId: string) => {
     Haptics.selectionAsync();
-    setSelectedOverlay(selectedOverlay === overlayId ? null : overlayId);
+    setSelectedOverlayId(selectedOverlayId === overlayId ? null : overlayId);
   };
 
   const handleNext = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    const selectedOverlay = overlays?.find((o) => o.id === selectedOverlayId);
     navigation.navigate("Preview", {
       photoUri,
-      overlayId: selectedOverlay,
+      overlayId: selectedOverlayId,
+      overlayUrl: selectedOverlay ? getOverlayImageUrl(selectedOverlay.imageUrl) : undefined,
     });
   };
 
@@ -68,10 +59,11 @@ export default function OverlaySelectScreen() {
     navigation.navigate("Preview", {
       photoUri,
       overlayId: null,
+      overlayUrl: undefined,
     });
   };
 
-  const selectedOverlayData = overlays.find((o) => o.id === selectedOverlay);
+  const selectedOverlay = overlays?.find((o) => o.id === selectedOverlayId);
 
   return (
     <ThemedView style={styles.container}>
@@ -87,9 +79,9 @@ export default function OverlaySelectScreen() {
       >
         <View style={styles.previewContainer}>
           <Image source={{ uri: photoUri }} style={styles.previewImage} />
-          {selectedOverlayData ? (
+          {selectedOverlay ? (
             <Image
-              source={selectedOverlayData.source}
+              source={{ uri: getOverlayImageUrl(selectedOverlay.imageUrl) }}
               style={styles.overlayImage}
               contentFit="cover"
             />
@@ -103,50 +95,71 @@ export default function OverlaySelectScreen() {
           Select an overlay (optional)
         </ThemedText>
 
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.overlayList}
-        >
-          {overlays.map((overlay) => (
-            <Pressable
-              key={overlay.id}
-              style={({ pressed }) => [
-                styles.overlayOption,
-                {
-                  backgroundColor: theme.backgroundDefault,
-                  borderColor:
-                    selectedOverlay === overlay.id
-                      ? theme.primary
-                      : theme.border,
-                  opacity: pressed ? 0.7 : 1,
-                },
-              ]}
-              onPress={() => handleSelectOverlay(overlay.id)}
-            >
-              <Image source={overlay.source} style={styles.overlayThumbnail} />
-              <ThemedText type="small" style={styles.overlayName}>
-                {overlay.name}
-              </ThemedText>
-              {selectedOverlay === overlay.id ? (
-                <View
-                  style={[
-                    styles.checkmark,
-                    { backgroundColor: theme.primary },
-                  ]}
-                >
-                  <Feather name="check" size={12} color="#FFFFFF" />
+        {isLoading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="small" color={theme.primary} />
+            <ThemedText type="small" style={{ color: theme.textSecondary, marginTop: Spacing.sm }}>
+              Loading overlays...
+            </ThemedText>
+          </View>
+        ) : overlays && overlays.length > 0 ? (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.overlayList}
+          >
+            {overlays.map((overlay) => (
+              <Pressable
+                key={overlay.id}
+                style={({ pressed }) => [
+                  styles.overlayOption,
+                  {
+                    backgroundColor: theme.backgroundDefault,
+                    borderColor:
+                      selectedOverlayId === overlay.id
+                        ? theme.primary
+                        : theme.border,
+                    opacity: pressed ? 0.7 : 1,
+                  },
+                ]}
+                onPress={() => handleSelectOverlay(overlay.id)}
+              >
+                <View style={[styles.overlayThumbnailContainer, { backgroundColor: theme.backgroundDefault }]}>
+                  <Image
+                    source={{ uri: getOverlayImageUrl(overlay.imageUrl) }}
+                    style={styles.overlayThumbnail}
+                    contentFit="contain"
+                  />
                 </View>
-              ) : null}
-            </Pressable>
-          ))}
-        </ScrollView>
+                <ThemedText type="small" style={styles.overlayName} numberOfLines={2}>
+                  {overlay.name}
+                </ThemedText>
+                {selectedOverlayId === overlay.id ? (
+                  <View
+                    style={[
+                      styles.checkmark,
+                      { backgroundColor: theme.primary },
+                    ]}
+                  >
+                    <Feather name="check" size={12} color="#FFFFFF" />
+                  </View>
+                ) : null}
+              </Pressable>
+            ))}
+          </ScrollView>
+        ) : (
+          <View style={styles.emptyContainer}>
+            <ThemedText type="small" style={{ color: theme.textSecondary }}>
+              No overlays available yet
+            </ThemedText>
+          </View>
+        )}
 
         <View style={styles.buttonContainer}>
           <Button onPress={handleNext}>
-            {selectedOverlay ? "Next" : "Continue without overlay"}
+            {selectedOverlayId ? "Next" : "Continue without overlay"}
           </Button>
-          {selectedOverlay ? (
+          {selectedOverlayId ? (
             <Pressable
               style={styles.skipButton}
               onPress={handleSkip}
@@ -190,6 +203,14 @@ const styles = StyleSheet.create({
   sectionTitle: {
     marginBottom: Spacing.lg,
   },
+  loadingContainer: {
+    alignItems: "center",
+    paddingVertical: Spacing.xl,
+  },
+  emptyContainer: {
+    alignItems: "center",
+    paddingVertical: Spacing.xl,
+  },
   overlayList: {
     gap: Spacing.md,
     paddingBottom: Spacing.xl,
@@ -201,11 +222,16 @@ const styles = StyleSheet.create({
     padding: Spacing.sm,
     alignItems: "center",
   },
-  overlayThumbnail: {
+  overlayThumbnailContainer: {
     width: 80,
     height: 80,
     borderRadius: BorderRadius.xs,
     marginBottom: Spacing.xs,
+    overflow: "hidden",
+  },
+  overlayThumbnail: {
+    width: "100%",
+    height: "100%",
   },
   overlayName: {
     textAlign: "center",

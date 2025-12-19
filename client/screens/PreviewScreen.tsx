@@ -28,28 +28,18 @@ type RouteType = RouteProp<RootStackParamList, "Preview">;
 const { width } = Dimensions.get("window");
 const PREVIEW_SIZE = width - Spacing.xl * 2;
 
-const overlayMap: Record<string, any> = {
-  confetti: require("../../assets/overlays/confetti.png"),
-  frame: require("../../assets/overlays/frame.png"),
-  star: require("../../assets/overlays/star.png"),
-  ribbon: require("../../assets/overlays/ribbon.png"),
-  geometric: require("../../assets/overlays/geometric.png"),
-};
-
 export default function PreviewScreen() {
   const { theme } = useTheme();
   const headerHeight = useHeaderHeight();
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<RouteType>();
-  const { photoUri, overlayId } = route.params;
+  const { photoUri, overlayId, overlayUrl } = route.params;
 
   const [caption, setCaption] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const viewShotRef = useRef<ViewShot>(null);
   const { addSubmission } = useSubmissions();
-
-  const overlaySource = overlayId ? overlayMap[overlayId] : null;
 
   const handleSubmit = async () => {
     if (isSubmitting) return;
@@ -60,7 +50,7 @@ export default function PreviewScreen() {
     try {
       let finalPhotoUri = photoUri;
 
-      if (viewShotRef.current && overlayId) {
+      if (viewShotRef.current && overlayUrl) {
         try {
           const capturedUri = await viewShotRef.current.capture?.();
           if (capturedUri) {
@@ -98,9 +88,9 @@ export default function PreviewScreen() {
         style={styles.previewContainer}
       >
         <Image source={{ uri: photoUri }} style={styles.previewImage} />
-        {overlaySource ? (
+        {overlayUrl ? (
           <Image
-            source={overlaySource}
+            source={{ uri: overlayUrl }}
             style={styles.overlayImage}
             contentFit="cover"
           />
