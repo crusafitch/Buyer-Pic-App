@@ -5,6 +5,8 @@ import {
   Dimensions,
   TextInput,
   ActivityIndicator,
+  Pressable,
+  Platform,
 } from "react-native";
 import { Image } from "expo-image";
 import { useVideoPlayer, VideoView } from "expo-video";
@@ -12,6 +14,7 @@ import { useHeaderHeight } from "@react-navigation/elements";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import ViewShot from "react-native-view-shot";
 
@@ -19,9 +22,11 @@ import { ThemedText } from "@/components/ThemedText";
 import { Button } from "@/components/Button";
 import { KeyboardAwareScrollViewCompat } from "@/components/KeyboardAwareScrollViewCompat";
 import { useTheme } from "@/hooks/useTheme";
-import { BorderRadius, Spacing } from "@/constants/theme";
+import { BorderRadius, Colors, Spacing } from "@/constants/theme";
 import { RootStackParamList } from "@/navigation/RootStackNavigator";
 import { useSubmissions } from "@/hooks/useSubmissions";
+import { useProfile } from "@/hooks/useProfile";
+import { getApiUrl } from "@/lib/query-client";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 type RouteType = RouteProp<RootStackParamList, "Preview">;
@@ -39,13 +44,63 @@ export default function PreviewScreen() {
 
   const [caption, setCaption] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isGeneratingCaption, setIsGeneratingCaption] = useState(false);
   const viewShotRef = useRef<ViewShot>(null);
   const { addSubmission } = useSubmissions();
+  const { profile } = useProfile();
 
   const videoPlayer = useVideoPlayer(mediaType === "video" ? mediaUri : null, player => {
     player.loop = true;
     player.play();
   });
+
+  const handleGenerateCaption = async () => {
+    if (isGeneratingCaption || mediaType !== "photo") return;
+
+    setIsGeneratingCaption(true);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+    try {
+      const formData = new FormData();
+      
+      if (Platform.OS === "web") {
+        const response = await fetch(mediaUri);
+        const blob = await response.blob();
+        formData.append("image", blob, "photo.jpg");
+      } else {
+        const imageFile = {
+          uri: mediaUri,
+          name: "photo.jpg",
+          type: "image/jpeg",
+        } as unknown as Blob;
+        formData.append("image", imageFile);
+      }
+      
+      formData.append("companyName", profile.companyName);
+      formData.append("userName", profile.username);
+
+      const apiUrl = new URL("/api/generate-caption", getApiUrl());
+      const res = await fetch(apiUrl.toString(), {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to generate caption");
+      }
+
+      const data = await res.json();
+      if (data.caption) {
+        setCaption(data.caption);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }
+    } catch (error) {
+      console.error("Failed to generate caption:", error);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    } finally {
+      setIsGeneratingCaption(false);
+    }
+  };
 
   const handleSubmit = async () => {
     if (isSubmitting) return;
@@ -115,12 +170,36 @@ export default function PreviewScreen() {
       )}
 
       <View style={styles.captionContainer}>
-        <ThemedText
-          type="body"
-          style={[styles.label, { color: theme.textSecondary }]}
-        >
-          Add a caption (optional)
-        </ThemedText>
+        <View style={styles.captionHeader}>
+          <ThemedText
+            type="body"
+            style={[styles.label, { color: theme.textSecondary }]}
+          >
+            Add a caption (optional)
+          </ThemedText>
+          {mediaType === "photo" ? (
+            <Pressable
+              style={[
+                styles.aiButton,
+                { 
+                  backgroundColor: isGeneratingCaption ? theme.backgroundSecondary : Colors.light.primary,
+                  opacity: isGeneratingCaption ? 0.7 : 1,
+                },
+              ]}
+              onPress={handleGenerateCaption}
+              disabled={isGeneratingCaption}
+            >
+              {isGeneratingCaption ? (
+                <ActivityIndicator color="#FFFFFF" size="small" />
+              ) : (
+                <>
+                  <Feather name="zap" size={14} color="#FFFFFF" />
+                  <ThemedText style={styles.aiButtonText}>AI Caption</ThemedText>
+                </>
+              )}
+            </Pressable>
+          ) : null}
+        </View>
         <TextInput
           style={[
             styles.captionInput,
@@ -184,8 +263,25 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.xl,
     flex: 1,
   },
-  label: {
+  captionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: Spacing.sm,
+  },
+  label: {},
+  aiButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs,
+    borderRadius: BorderRadius.full,
+    gap: 4,
+  },
+  aiButtonText: {
+    color: "#FFFFFF",
+    fontSize: 12,
+    fontWeight: "600",
   },
   captionInput: {
     borderWidth: 1,

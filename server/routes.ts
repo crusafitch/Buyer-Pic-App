@@ -3,8 +3,14 @@ import { createServer, type Server } from "node:http";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
+import OpenAI from "openai";
 import { storage } from "./storage";
 import { insertOverlaySchema, insertSubmissionSchema } from "@shared/schema";
+
+const openai = new OpenAI({
+  apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
+  baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+});
 
 const uploadsDir = path.resolve(process.cwd(), "uploads");
 const overlaysDir = path.resolve(uploadsDir, "overlays");
@@ -210,6 +216,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(submission);
     } catch (error) {
       res.status(500).json({ error: "Failed to update submission status" });
+    }
+  });
+
+  app.post("/api/generate-caption", uploadSubmission.single("image"), async (req: Request, res: Response) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: "Image file is required" });
+      }
+
+      const { companyName, userName, context } = req.body;
+
+      const imageBuffer = fs.readFileSync(req.file.path);
+      const base64Image = imageBuffer.toString("base64");
+      const mimeType = req.file.mimetype;
+
+      const systemPrompt = `You are a marketing copywriter for an advertising agency. Generate engaging, professional social media captions for customer photos submitted by business clients.
+
+Guidelines:
+- Keep captions concise (under 150 characters)
+- Use a friendly, professional tone
+- Highlight the customer experience and brand positively
+- Include a subtle call-to-action when appropriate
+- Do not use hashtags unless specifically requested
+- Make the caption suitable for Instagram, Facebook, or LinkedIn`;
+
+      const userPrompt = `Generate a social media caption for this customer photo.
+${companyName ? `Business: ${companyName}` : ""}
+${userName ? `Submitted by: ${userName}` : ""}
+${context ? `Additional context: ${context}` : ""}
+
+Analyze the image and create an engaging caption that highlights the positive customer experience.`;
+
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [
+          { role: "system", content: systemPrompt },
+          {
+            role: "user",
+            content: [
+              { type: "text", text: userPrompt },
+              {
+                type: "image_url",
+                image_url: { url: `data:${mimeType};base64,${base64Image}` },
+              },
+            ],
+          },
+        ],
+        max_tokens: 200,
+      });
+
+      fs.unlinkSync(req.file.path);
+
+      const caption = response.choices[0]?.message?.content?.trim() || "";
+      res.json({ caption });
+    } catch (error) {
+      console.error("Error generating caption:", error);
+      if (req.file && fs.existsSync(req.file.path)) {
+        fs.unlinkSync(req.file.path);
+      }
+      res.status(500).json({ error: "Failed to generate caption" });
     }
   });
 
