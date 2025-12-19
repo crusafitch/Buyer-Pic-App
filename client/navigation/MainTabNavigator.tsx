@@ -7,8 +7,8 @@ import GalleryScreen from "@/screens/GalleryScreen";
 import CreateScreen from "@/screens/CreateScreen";
 import ProfileScreen from "@/screens/ProfileScreen";
 import { useTheme } from "@/hooks/useTheme";
-import { useScreenOptions } from "@/hooks/useScreenOptions";
 import { BorderRadius, Colors, Spacing } from "@/constants/theme";
+import { BrandHeader } from "@/components/BrandHeader";
 
 export type MainTabParamList = {
   GalleryTab: undefined;
@@ -20,13 +20,16 @@ const Tab = createBottomTabNavigator<MainTabParamList>();
 
 export default function MainTabNavigator() {
   const { theme, isDark } = useTheme();
-  const screenOptions = useScreenOptions();
 
   return (
     <Tab.Navigator
       initialRouteName="GalleryTab"
       screenOptions={{
-        ...screenOptions,
+        headerTitleAlign: "center",
+        headerTintColor: theme.text,
+        headerStyle: {
+          backgroundColor: theme.backgroundRoot,
+        },
         tabBarActiveTintColor: theme.tabIconSelected,
         tabBarInactiveTintColor: theme.tabIconDefault,
         tabBarStyle: {
@@ -53,7 +56,7 @@ export default function MainTabNavigator() {
         component={GalleryScreen}
         options={{
           title: "Submissions",
-          headerTitle: "Submissions",
+          headerTitle: () => <BrandHeader />,
           tabBarLabel: "Gallery",
           tabBarIcon: ({ color, size }) => (
             <Feather name="image" size={size} color={color} />

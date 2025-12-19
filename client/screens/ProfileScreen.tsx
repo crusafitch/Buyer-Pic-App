@@ -1,5 +1,5 @@
 import React from "react";
-import { View, StyleSheet, ScrollView, Pressable, Alert } from "react-native";
+import { View, StyleSheet, ScrollView, Pressable } from "react-native";
 import { useHeaderHeight } from "@react-navigation/elements";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { Feather } from "@expo/vector-icons";
@@ -11,6 +11,7 @@ import { ThemedView } from "@/components/ThemedView";
 import { useTheme } from "@/hooks/useTheme";
 import { BorderRadius, Spacing } from "@/constants/theme";
 import { useSubmissions } from "@/hooks/useSubmissions";
+import { PoweredByFooter } from "@/components/PoweredByFooter";
 
 function SettingsRow({
   icon,
@@ -73,32 +74,14 @@ export default function ProfileScreen() {
   const { theme } = useTheme();
   const headerHeight = useHeaderHeight();
   const tabBarHeight = useBottomTabBarHeight();
-  const { submissions, clearSubmissions } = useSubmissions();
+  const { submissions } = useSubmissions();
 
   const totalSubmissions = submissions.length;
   const pendingCount = submissions.filter((s) => s.status === "pending").length;
   const postedCount = submissions.filter((s) => s.status === "posted").length;
 
   const handleContactSupport = async () => {
-    await WebBrowser.openBrowserAsync("mailto:support@agency.com");
-  };
-
-  const handleClearData = () => {
-    Alert.alert(
-      "Clear All Data",
-      "This will delete all your local submissions. This action cannot be undone.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Clear",
-          style: "destructive",
-          onPress: () => {
-            clearSubmissions();
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-          },
-        },
-      ]
-    );
+    await WebBrowser.openBrowserAsync("mailto:support@bigtimeadvertising.com");
   };
 
   return (
@@ -199,27 +182,13 @@ export default function ProfileScreen() {
           />
         </View>
 
-        <View style={styles.section}>
-          <ThemedText
-            type="small"
-            style={[styles.sectionTitle, { color: theme.textSecondary }]}
-          >
-            DATA
-          </ThemedText>
-          <SettingsRow
-            icon="trash-2"
-            label="Clear All Data"
-            onPress={handleClearData}
-            destructive
-            showChevron={false}
-          />
-        </View>
+        <PoweredByFooter />
 
         <ThemedText
           type="small"
           style={[styles.version, { color: theme.textSecondary }]}
         >
-          Photo Portal v1.0.0
+          Big Time Photo Portal v1.0.0
         </ThemedText>
       </ScrollView>
     </ThemedView>
