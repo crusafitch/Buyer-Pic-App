@@ -2,13 +2,17 @@ import React from "react";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Feather } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
-import { Platform, StyleSheet } from "react-native";
-import HomeStackNavigator from "@/navigation/HomeStackNavigator";
-import ProfileStackNavigator from "@/navigation/ProfileStackNavigator";
+import { Platform, StyleSheet, View } from "react-native";
+import GalleryScreen from "@/screens/GalleryScreen";
+import CreateScreen from "@/screens/CreateScreen";
+import ProfileScreen from "@/screens/ProfileScreen";
 import { useTheme } from "@/hooks/useTheme";
+import { useScreenOptions } from "@/hooks/useScreenOptions";
+import { BorderRadius, Colors, Spacing } from "@/constants/theme";
 
 export type MainTabParamList = {
-  HomeTab: undefined;
+  GalleryTab: undefined;
+  CreateTab: undefined;
   ProfileTab: undefined;
 };
 
@@ -16,11 +20,13 @@ const Tab = createBottomTabNavigator<MainTabParamList>();
 
 export default function MainTabNavigator() {
   const { theme, isDark } = useTheme();
+  const screenOptions = useScreenOptions();
 
   return (
     <Tab.Navigator
-      initialRouteName="HomeTab"
+      initialRouteName="GalleryTab"
       screenOptions={{
+        ...screenOptions,
         tabBarActiveTintColor: theme.tabIconSelected,
         tabBarInactiveTintColor: theme.tabIconDefault,
         tabBarStyle: {
@@ -40,24 +46,50 @@ export default function MainTabNavigator() {
               style={StyleSheet.absoluteFill}
             />
           ) : null,
-        headerShown: false,
       }}
     >
       <Tab.Screen
-        name="HomeTab"
-        component={HomeStackNavigator}
+        name="GalleryTab"
+        component={GalleryScreen}
         options={{
-          title: "Home",
+          title: "Submissions",
+          headerTitle: "Submissions",
+          tabBarLabel: "Gallery",
           tabBarIcon: ({ color, size }) => (
-            <Feather name="home" size={size} color={color} />
+            <Feather name="image" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="CreateTab"
+        component={CreateScreen}
+        options={{
+          title: "Create",
+          headerShown: false,
+          tabBarLabel: "Create",
+          tabBarIcon: ({ color, size, focused }) => (
+            <View
+              style={[
+                styles.createIconContainer,
+                {
+                  backgroundColor: focused
+                    ? Colors.light.primary
+                    : Colors.light.secondary,
+                },
+              ]}
+            >
+              <Feather name="camera" size={size - 4} color="#FFFFFF" />
+            </View>
           ),
         }}
       />
       <Tab.Screen
         name="ProfileTab"
-        component={ProfileStackNavigator}
+        component={ProfileScreen}
         options={{
           title: "Profile",
+          headerTitle: "Profile",
+          tabBarLabel: "Profile",
           tabBarIcon: ({ color, size }) => (
             <Feather name="user" size={size} color={color} />
           ),
@@ -66,3 +98,14 @@ export default function MainTabNavigator() {
     </Tab.Navigator>
   );
 }
+
+const styles = StyleSheet.create({
+  createIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: BorderRadius.full,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: -Spacing.lg,
+  },
+});

@@ -1,12 +1,16 @@
 import React from "react";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import MainTabNavigator from "@/navigation/MainTabNavigator";
-import ModalScreen from "@/screens/ModalScreen";
+import OverlaySelectScreen from "@/screens/OverlaySelectScreen";
+import PreviewScreen from "@/screens/PreviewScreen";
+import SuccessModal from "@/screens/SuccessModal";
 import { useScreenOptions } from "@/hooks/useScreenOptions";
 
 export type RootStackParamList = {
   Main: undefined;
-  Modal: undefined;
+  OverlaySelect: { photoUri: string };
+  Preview: { photoUri: string; overlayId: string | null };
+  Success: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -22,11 +26,26 @@ export default function RootStackNavigator() {
         options={{ headerShown: false }}
       />
       <Stack.Screen
-        name="Modal"
-        component={ModalScreen}
+        name="OverlaySelect"
+        component={OverlaySelectScreen}
         options={{
-          presentation: "modal",
-          headerTitle: "Modal",
+          headerTitle: "Choose Overlay",
+        }}
+      />
+      <Stack.Screen
+        name="Preview"
+        component={PreviewScreen}
+        options={{
+          headerTitle: "Review",
+        }}
+      />
+      <Stack.Screen
+        name="Success"
+        component={SuccessModal}
+        options={{
+          presentation: "transparentModal",
+          headerShown: false,
+          animation: "fade",
         }}
       />
     </Stack.Navigator>
