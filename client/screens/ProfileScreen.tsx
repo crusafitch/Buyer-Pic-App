@@ -2,11 +2,11 @@ import React, { useState } from "react";
 import {
   View,
   StyleSheet,
-  ScrollView,
   Pressable,
   TextInput,
   Platform,
   Alert,
+  Linking,
 } from "react-native";
 import { useHeaderHeight } from "@react-navigation/elements";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
@@ -15,6 +15,7 @@ import * as Haptics from "expo-haptics";
 import * as WebBrowser from "expo-web-browser";
 import * as ImagePicker from "expo-image-picker";
 import { Image } from "expo-image";
+import { KeyboardAwareScrollViewCompat } from "@/components/KeyboardAwareScrollViewCompat";
 
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
@@ -112,17 +113,38 @@ export default function ProfileScreen() {
       return;
     }
 
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== "granted") {
-      Alert.alert(
-        "Permission Required",
-        "Please allow access to your photo library to upload a profile photo."
-      );
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    
+    if (!permission.granted) {
+      if (permission.status === "denied" && !permission.canAskAgain) {
+        Alert.alert(
+          "Permission Required",
+          "Please enable photo library access in your device settings.",
+          [
+            { text: "Cancel", style: "cancel" },
+            {
+              text: "Open Settings",
+              onPress: async () => {
+                try {
+                  await Linking.openSettings();
+                } catch (error) {
+                  // Settings not available
+                }
+              },
+            },
+          ]
+        );
+      } else {
+        Alert.alert(
+          "Permission Required",
+          "Please allow access to your photo library to upload a profile photo."
+        );
+      }
       return;
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["images"],
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.8,
@@ -164,7 +186,7 @@ export default function ProfileScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <ScrollView
+      <KeyboardAwareScrollViewCompat
         contentContainerStyle={[
           styles.scrollContent,
           {
@@ -346,7 +368,7 @@ export default function ProfileScreen() {
         >
           Big Time Photo Portal v1.0.0
         </ThemedText>
-      </ScrollView>
+      </KeyboardAwareScrollViewCompat>
     </ThemedView>
   );
 }
