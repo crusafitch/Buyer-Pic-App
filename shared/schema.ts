@@ -31,6 +31,7 @@ export const submissions = pgTable("submissions", {
   caption: text("caption"),
   status: text("status").notNull().default("pending"),
   clientId: varchar("client_id"),
+  mediaType: text("media_type").notNull().default("photo"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -50,6 +51,7 @@ export const insertSubmissionSchema = createInsertSchema(submissions).pick({
   overlayId: true,
   caption: true,
   clientId: true,
+  mediaType: true,
 });
 
 export type InsertUser = z.infer<typeof insertUserSchema>;

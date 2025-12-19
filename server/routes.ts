@@ -48,7 +48,18 @@ const uploadOverlay = multer({
 
 const uploadSubmission = multer({
   storage: submissionStorage,
-  limits: { fileSize: 20 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const allowedTypes = [
+      "image/png", "image/jpeg", "image/webp",
+      "video/mp4", "video/quicktime", "video/x-m4v"
+    ];
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error("Only images and videos are allowed"));
+    }
+  },
+  limits: { fileSize: 100 * 1024 * 1024 },
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -159,18 +170,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/submissions", uploadSubmission.single("photo"), async (req: Request, res: Response) => {
+  app.post("/api/submissions", uploadSubmission.single("media"), async (req: Request, res: Response) => {
     try {
       if (!req.file) {
-        return res.status(400).json({ error: "Photo file is required" });
+        return res.status(400).json({ error: "Media file is required" });
       }
 
-      const photoUrl = `/uploads/submissions/${req.file.filename}`;
+      const mediaUrl = `/uploads/submissions/${req.file.filename}`;
+      const mediaType = req.body.mediaType || "photo";
+      
       const submission = await storage.createSubmission({
-        photoUrl,
+        photoUrl: mediaUrl,
         overlayId: req.body.overlayId || null,
         caption: req.body.caption || null,
         clientId: req.body.clientId || null,
+        mediaType,
       });
 
       res.status(201).json(submission);

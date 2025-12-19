@@ -9,6 +9,7 @@ export interface Submission {
   caption: string | null;
   status: "pending" | "posted";
   clientId: string | null;
+  mediaType: "photo" | "video";
   createdAt: string;
 }
 
@@ -22,19 +23,22 @@ export function useSubmissions() {
 
   const addSubmissionMutation = useMutation({
     mutationFn: async ({
-      photoUri,
+      mediaUri,
       overlayId,
       caption,
+      mediaType,
     }: {
-      photoUri: string;
+      mediaUri: string;
       overlayId: string | null;
       caption: string;
+      mediaType: "photo" | "video";
     }) => {
       const baseUrl = getApiUrl();
       const formData = new FormData();
 
-      const file = new File(photoUri);
-      formData.append("photo", file as unknown as Blob);
+      const file = new File(mediaUri);
+      formData.append("media", file as unknown as Blob);
+      formData.append("mediaType", mediaType);
 
       if (overlayId) {
         formData.append("overlayId", overlayId);
@@ -62,11 +66,12 @@ export function useSubmissions() {
   });
 
   const addSubmission = async (
-    photoUri: string,
+    mediaUri: string,
     overlayId: string | null,
-    caption: string
+    caption: string,
+    mediaType: "photo" | "video" = "photo"
   ): Promise<Submission> => {
-    return addSubmissionMutation.mutateAsync({ photoUri, overlayId, caption });
+    return addSubmissionMutation.mutateAsync({ mediaUri, overlayId, caption, mediaType });
   };
 
   return {

@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { Image } from "expo-image";
+import { useVideoPlayer, VideoView } from "expo-video";
 import { useHeaderHeight } from "@react-navigation/elements";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
@@ -34,12 +35,17 @@ export default function PreviewScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<RouteType>();
-  const { photoUri, overlayId, overlayUrl } = route.params;
+  const { mediaUri, mediaType, overlayId, overlayUrl } = route.params;
 
   const [caption, setCaption] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const viewShotRef = useRef<ViewShot>(null);
   const { addSubmission } = useSubmissions();
+
+  const videoPlayer = useVideoPlayer(mediaType === "video" ? mediaUri : null, player => {
+    player.loop = true;
+    player.play();
+  });
 
   const handleSubmit = async () => {
     if (isSubmitting) return;
@@ -48,20 +54,20 @@ export default function PreviewScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
     try {
-      let finalPhotoUri = photoUri;
+      let finalMediaUri = mediaUri;
 
-      if (viewShotRef.current && overlayUrl) {
+      if (mediaType === "photo" && viewShotRef.current && overlayUrl) {
         try {
           const capturedUri = await viewShotRef.current.capture?.();
           if (capturedUri) {
-            finalPhotoUri = capturedUri;
+            finalMediaUri = capturedUri;
           }
         } catch (captureError) {
           console.warn("Could not capture composite image:", captureError);
         }
       }
 
-      await addSubmission(finalPhotoUri, overlayId, caption);
+      await addSubmission(finalMediaUri, overlayId, caption, mediaType);
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       navigation.navigate("Success");
@@ -82,20 +88,31 @@ export default function PreviewScreen() {
         },
       ]}
     >
-      <ViewShot
-        ref={viewShotRef}
-        options={{ format: "jpg", quality: 0.9 }}
-        style={styles.previewContainer}
-      >
-        <Image source={{ uri: photoUri }} style={styles.previewImage} />
-        {overlayUrl ? (
-          <Image
-            source={{ uri: overlayUrl }}
-            style={styles.overlayImage}
+      {mediaType === "video" ? (
+        <View style={styles.previewContainer}>
+          <VideoView
+            player={videoPlayer}
+            style={styles.videoPlayer}
             contentFit="cover"
+            nativeControls={true}
           />
-        ) : null}
-      </ViewShot>
+        </View>
+      ) : (
+        <ViewShot
+          ref={viewShotRef}
+          options={{ format: "jpg", quality: 0.9 }}
+          style={styles.previewContainer}
+        >
+          <Image source={{ uri: mediaUri }} style={styles.previewImage} />
+          {overlayUrl ? (
+            <Image
+              source={{ uri: overlayUrl }}
+              style={styles.overlayImage}
+              contentFit="cover"
+            />
+          ) : null}
+        </ViewShot>
+      )}
 
       <View style={styles.captionContainer}>
         <ThemedText
@@ -113,7 +130,7 @@ export default function PreviewScreen() {
               borderColor: theme.border,
             },
           ]}
-          placeholder="Describe this customer success..."
+          placeholder={mediaType === "video" ? "Describe this video..." : "Describe this customer success..."}
           placeholderTextColor={theme.textSecondary}
           value={caption}
           onChangeText={setCaption}
@@ -153,6 +170,10 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.xl,
   },
   previewImage: {
+    width: "100%",
+    height: "100%",
+  },
+  videoPlayer: {
     width: "100%",
     height: "100%",
   },

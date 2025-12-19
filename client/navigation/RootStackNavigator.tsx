@@ -8,8 +8,8 @@ import { useScreenOptions } from "@/hooks/useScreenOptions";
 
 export type RootStackParamList = {
   Main: undefined;
-  OverlaySelect: { photoUri: string };
-  Preview: { photoUri: string; overlayId: string | null; overlayUrl?: string };
+  OverlaySelect: { mediaUri: string; mediaType: "photo" | "video" };
+  Preview: { mediaUri: string; mediaType: "photo" | "video"; overlayId: string | null; overlayUrl?: string };
   Success: undefined;
 };
 

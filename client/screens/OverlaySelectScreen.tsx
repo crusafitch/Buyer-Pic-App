@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { Image } from "expo-image";
+import { useVideoPlayer, VideoView } from "expo-video";
 import { useHeaderHeight } from "@react-navigation/elements";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
@@ -35,10 +36,15 @@ export default function OverlaySelectScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<RouteType>();
-  const { photoUri } = route.params;
+  const { mediaUri, mediaType } = route.params;
 
   const { data: overlays, isLoading } = useOverlays();
   const [selectedOverlayId, setSelectedOverlayId] = useState<string | null>(null);
+
+  const videoPlayer = useVideoPlayer(mediaType === "video" ? mediaUri : null, player => {
+    player.loop = true;
+    player.play();
+  });
 
   const handleSelectOverlay = (overlayId: string) => {
     Haptics.selectionAsync();
@@ -49,7 +55,8 @@ export default function OverlaySelectScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     const selectedOverlay = overlays?.find((o) => o.id === selectedOverlayId);
     navigation.navigate("Preview", {
-      photoUri,
+      mediaUri,
+      mediaType,
       overlayId: selectedOverlayId,
       overlayUrl: selectedOverlay ? getOverlayImageUrl(selectedOverlay.imageUrl) : undefined,
     });
@@ -57,7 +64,8 @@ export default function OverlaySelectScreen() {
 
   const handleSkip = () => {
     navigation.navigate("Preview", {
-      photoUri,
+      mediaUri,
+      mediaType,
       overlayId: null,
       overlayUrl: undefined,
     });
@@ -78,88 +86,110 @@ export default function OverlaySelectScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.previewContainer}>
-          <Image source={{ uri: photoUri }} style={styles.previewImage} />
-          {selectedOverlay ? (
-            <Image
-              source={{ uri: getOverlayImageUrl(selectedOverlay.imageUrl) }}
-              style={styles.overlayImage}
+          {mediaType === "video" ? (
+            <VideoView
+              player={videoPlayer}
+              style={styles.previewImage}
               contentFit="cover"
+              nativeControls={false}
             />
-          ) : null}
+          ) : (
+            <>
+              <Image source={{ uri: mediaUri }} style={styles.previewImage} />
+              {selectedOverlay ? (
+                <Image
+                  source={{ uri: getOverlayImageUrl(selectedOverlay.imageUrl) }}
+                  style={styles.overlayImage}
+                  contentFit="cover"
+                />
+              ) : null}
+            </>
+          )}
         </View>
 
-        <ThemedText
-          type="body"
-          style={[styles.sectionTitle, { color: theme.textSecondary }]}
-        >
-          Select an overlay (optional)
-        </ThemedText>
+        {mediaType === "photo" ? (
+          <>
+            <ThemedText
+              type="body"
+              style={[styles.sectionTitle, { color: theme.textSecondary }]}
+            >
+              Select an overlay (optional)
+            </ThemedText>
 
-        {isLoading ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="small" color={theme.primary} />
-            <ThemedText type="small" style={{ color: theme.textSecondary, marginTop: Spacing.sm }}>
-              Loading overlays...
-            </ThemedText>
-          </View>
-        ) : overlays && overlays.length > 0 ? (
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.overlayList}
-          >
-            {overlays.map((overlay) => (
-              <Pressable
-                key={overlay.id}
-                style={({ pressed }) => [
-                  styles.overlayOption,
-                  {
-                    backgroundColor: theme.backgroundDefault,
-                    borderColor:
-                      selectedOverlayId === overlay.id
-                        ? theme.primary
-                        : theme.border,
-                    opacity: pressed ? 0.7 : 1,
-                  },
-                ]}
-                onPress={() => handleSelectOverlay(overlay.id)}
-              >
-                <View style={[styles.overlayThumbnailContainer, { backgroundColor: theme.backgroundDefault }]}>
-                  <Image
-                    source={{ uri: getOverlayImageUrl(overlay.imageUrl) }}
-                    style={styles.overlayThumbnail}
-                    contentFit="contain"
-                  />
-                </View>
-                <ThemedText type="small" style={styles.overlayName} numberOfLines={2}>
-                  {overlay.name}
+            {isLoading ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="small" color={theme.primary} />
+                <ThemedText type="small" style={{ color: theme.textSecondary, marginTop: Spacing.sm }}>
+                  Loading overlays...
                 </ThemedText>
-                {selectedOverlayId === overlay.id ? (
-                  <View
-                    style={[
-                      styles.checkmark,
-                      { backgroundColor: theme.primary },
+              </View>
+            ) : overlays && overlays.length > 0 ? (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.overlayList}
+              >
+                {overlays.map((overlay) => (
+                  <Pressable
+                    key={overlay.id}
+                    style={({ pressed }) => [
+                      styles.overlayOption,
+                      {
+                        backgroundColor: theme.backgroundDefault,
+                        borderColor:
+                          selectedOverlayId === overlay.id
+                            ? theme.primary
+                            : theme.border,
+                        opacity: pressed ? 0.7 : 1,
+                      },
                     ]}
+                    onPress={() => handleSelectOverlay(overlay.id)}
                   >
-                    <Feather name="check" size={12} color="#FFFFFF" />
-                  </View>
-                ) : null}
-              </Pressable>
-            ))}
-          </ScrollView>
+                    <View style={[styles.overlayThumbnailContainer, { backgroundColor: theme.backgroundDefault }]}>
+                      <Image
+                        source={{ uri: getOverlayImageUrl(overlay.imageUrl) }}
+                        style={styles.overlayThumbnail}
+                        contentFit="contain"
+                      />
+                    </View>
+                    <ThemedText type="small" style={styles.overlayName} numberOfLines={2}>
+                      {overlay.name}
+                    </ThemedText>
+                    {selectedOverlayId === overlay.id ? (
+                      <View
+                        style={[
+                          styles.checkmark,
+                          { backgroundColor: theme.primary },
+                        ]}
+                      >
+                        <Feather name="check" size={12} color="#FFFFFF" />
+                      </View>
+                    ) : null}
+                  </Pressable>
+                ))}
+              </ScrollView>
+            ) : (
+              <View style={styles.emptyContainer}>
+                <ThemedText type="small" style={{ color: theme.textSecondary }}>
+                  No overlays available yet
+                </ThemedText>
+              </View>
+            )}
+          </>
         ) : (
-          <View style={styles.emptyContainer}>
-            <ThemedText type="small" style={{ color: theme.textSecondary }}>
-              No overlays available yet
-            </ThemedText>
-          </View>
+          <ThemedText
+            type="body"
+            style={[styles.sectionTitle, { color: theme.textSecondary }]}
+          >
+            Overlays are not available for videos
+          </ThemedText>
         )}
 
         <View style={styles.buttonContainer}>
           <Button onPress={handleNext}>
-            {selectedOverlayId ? "Next" : "Continue without overlay"}
+            {mediaType === "video" ? "Continue" : (selectedOverlayId ? "Next" : "Continue without overlay")}
           </Button>
-          {selectedOverlayId ? (
+          {selectedOverlayId && mediaType === "photo" ? (
             <Pressable
               style={styles.skipButton}
               onPress={handleSkip}
