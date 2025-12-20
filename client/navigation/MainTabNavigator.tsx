@@ -6,6 +6,7 @@ import { Platform, StyleSheet, View } from "react-native";
 import GalleryScreen from "@/screens/GalleryScreen";
 import CreateScreen from "@/screens/CreateScreen";
 import ProfileScreen from "@/screens/ProfileScreen";
+import NewsScreen from "@/screens/NewsScreen";
 import { useTheme } from "@/hooks/useTheme";
 import { BorderRadius, Colors, Spacing } from "@/constants/theme";
 import { BrandHeader } from "@/components/BrandHeader";
@@ -13,6 +14,7 @@ import { BrandHeader } from "@/components/BrandHeader";
 export type MainTabParamList = {
   GalleryTab: undefined;
   CreateTab: undefined;
+  NewsTab: undefined;
   ProfileTab: undefined;
 };
 
@@ -83,6 +85,18 @@ export default function MainTabNavigator() {
             >
               <Feather name="camera" size={size - 4} color="#FFFFFF" />
             </View>
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="NewsTab"
+        component={NewsScreen}
+        options={{
+          title: "News",
+          headerTitle: () => <BrandHeader />,
+          tabBarLabel: "News",
+          tabBarIcon: ({ color, size }) => (
+            <Feather name="file-text" size={size} color={color} />
           ),
         }}
       />

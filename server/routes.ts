@@ -323,6 +323,52 @@ Analyze the image and create an engaging caption that highlights the positive cu
     }
   });
 
+  // News/Blog RSS feed endpoint
+  app.get("/api/news", async (_req: Request, res: Response) => {
+    try {
+      const rssUrl = "https://www.gowithbigtime.com/blog-rss?blog=Default%20Blog";
+      const response = await fetch(rssUrl);
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch RSS: ${response.status}`);
+      }
+      
+      const rssText = await response.text();
+      
+      // Parse RSS XML
+      const items: Array<{
+        title: string;
+        link: string;
+        description: string;
+        pubDate: string;
+      }> = [];
+      
+      // Simple RSS parsing
+      const itemMatches = rssText.match(/<item>([\s\S]*?)<\/item>/g) || [];
+      
+      for (const itemXml of itemMatches) {
+        const title = itemXml.match(/<title><!\[CDATA\[([\s\S]*?)\]\]><\/title>|<title>([\s\S]*?)<\/title>/)?.[1] || 
+                     itemXml.match(/<title><!\[CDATA\[([\s\S]*?)\]\]><\/title>|<title>([\s\S]*?)<\/title>/)?.[2] || "";
+        const link = itemXml.match(/<link>([\s\S]*?)<\/link>/)?.[1] || "";
+        const description = itemXml.match(/<description><!\[CDATA\[([\s\S]*?)\]\]><\/description>|<description>([\s\S]*?)<\/description>/)?.[1] ||
+                           itemXml.match(/<description><!\[CDATA\[([\s\S]*?)\]\]><\/description>|<description>([\s\S]*?)<\/description>/)?.[2] || "";
+        const pubDate = itemXml.match(/<pubDate>([\s\S]*?)<\/pubDate>/)?.[1] || "";
+        
+        items.push({
+          title: title.trim(),
+          link: link.trim(),
+          description: description.trim(),
+          pubDate: pubDate.trim(),
+        });
+      }
+      
+      res.json(items);
+    } catch (error) {
+      console.error("Error fetching news:", error);
+      res.status(500).json({ error: "Failed to fetch news" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
