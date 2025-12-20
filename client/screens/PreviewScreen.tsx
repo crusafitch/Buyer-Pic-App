@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { Image } from "expo-image";
 import { useVideoPlayer, VideoView } from "expo-video";
+import * as VideoThumbnails from "expo-video-thumbnails";
 import { useHeaderHeight } from "@react-navigation/elements";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
@@ -50,12 +51,11 @@ export default function PreviewScreen() {
   const { profile } = useProfile();
 
   const videoPlayer = useVideoPlayer(mediaType === "video" ? mediaUri : null, player => {
-    player.loop = true;
-    player.play();
+    player.loop = false;
   });
 
   const handleGenerateCaption = async () => {
-    if (isGeneratingCaption || mediaType !== "photo") return;
+    if (isGeneratingCaption) return;
 
     setIsGeneratingCaption(true);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -63,13 +63,27 @@ export default function PreviewScreen() {
     try {
       const formData = new FormData();
       
+      let imageUri = mediaUri;
+      
+      if (mediaType === "video") {
+        try {
+          const thumbnail = await VideoThumbnails.getThumbnailAsync(mediaUri, {
+            time: 1000,
+          });
+          imageUri = thumbnail.uri;
+        } catch (thumbError) {
+          console.error("Failed to get video thumbnail:", thumbError);
+          throw new Error("Could not extract frame from video");
+        }
+      }
+      
       if (Platform.OS === "web") {
-        const response = await fetch(mediaUri);
+        const response = await fetch(imageUri);
         const blob = await response.blob();
         formData.append("image", blob, "photo.jpg");
       } else {
         const imageFile = {
-          uri: mediaUri,
+          uri: imageUri,
           name: "photo.jpg",
           type: "image/jpeg",
         } as unknown as Blob;
@@ -177,28 +191,26 @@ export default function PreviewScreen() {
           >
             Add a caption (optional)
           </ThemedText>
-          {mediaType === "photo" ? (
-            <Pressable
-              style={[
-                styles.aiButton,
-                { 
-                  backgroundColor: isGeneratingCaption ? theme.backgroundSecondary : Colors.light.primary,
-                  opacity: isGeneratingCaption ? 0.7 : 1,
-                },
-              ]}
-              onPress={handleGenerateCaption}
-              disabled={isGeneratingCaption}
-            >
-              {isGeneratingCaption ? (
-                <ActivityIndicator color="#FFFFFF" size="small" />
-              ) : (
-                <>
-                  <Feather name="zap" size={14} color="#FFFFFF" />
-                  <ThemedText style={styles.aiButtonText}>AI Caption</ThemedText>
-                </>
-              )}
-            </Pressable>
-          ) : null}
+          <Pressable
+            style={[
+              styles.aiButton,
+              { 
+                backgroundColor: isGeneratingCaption ? theme.backgroundSecondary : Colors.light.primary,
+                opacity: isGeneratingCaption ? 0.7 : 1,
+              },
+            ]}
+            onPress={handleGenerateCaption}
+            disabled={isGeneratingCaption}
+          >
+            {isGeneratingCaption ? (
+              <ActivityIndicator color="#FFFFFF" size="small" />
+            ) : (
+              <>
+                <Feather name="zap" size={14} color="#FFFFFF" />
+                <ThemedText style={styles.aiButtonText}>AI Caption</ThemedText>
+              </>
+            )}
+          </Pressable>
         </View>
         <TextInput
           style={[
