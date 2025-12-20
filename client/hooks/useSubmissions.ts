@@ -27,11 +27,15 @@ export function useSubmissions() {
       overlayId,
       caption,
       mediaType,
+      clientName,
+      companyName,
     }: {
       mediaUri: string;
       overlayId: string | null;
       caption: string;
       mediaType: "photo" | "video";
+      clientName?: string;
+      companyName?: string;
     }) => {
       const baseUrl = getApiUrl();
       const formData = new FormData();
@@ -45,6 +49,12 @@ export function useSubmissions() {
       }
       if (caption) {
         formData.append("caption", caption);
+      }
+      if (clientName) {
+        formData.append("clientName", clientName);
+      }
+      if (companyName) {
+        formData.append("companyName", companyName);
       }
 
       const response = await fetch(new URL("/api/submissions", baseUrl).href, {
@@ -69,9 +79,11 @@ export function useSubmissions() {
     mediaUri: string,
     overlayId: string | null,
     caption: string,
-    mediaType: "photo" | "video" = "photo"
+    mediaType: "photo" | "video" = "photo",
+    clientName?: string,
+    companyName?: string
   ): Promise<Submission> => {
-    return addSubmissionMutation.mutateAsync({ mediaUri, overlayId, caption, mediaType });
+    return addSubmissionMutation.mutateAsync({ mediaUri, overlayId, caption, mediaType, clientName, companyName });
   };
 
   return {

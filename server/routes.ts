@@ -4,8 +4,11 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 import OpenAI from "openai";
+import { Resend } from "resend";
 import { storage } from "./storage";
 import { insertOverlaySchema, insertSubmissionSchema } from "@shared/schema";
+
+const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
 const openai = new OpenAI({
   apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
@@ -184,14 +187,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const mediaUrl = `/uploads/submissions/${req.file.filename}`;
       const mediaType = req.body.mediaType || "photo";
+      const caption = req.body.caption || "";
+      const clientName = req.body.clientName || "Unknown Client";
+      const companyName = req.body.companyName || "Unknown Company";
       
       const submission = await storage.createSubmission({
         photoUrl: mediaUrl,
         overlayId: req.body.overlayId || null,
-        caption: req.body.caption || null,
+        caption: caption || null,
         clientId: req.body.clientId || null,
         mediaType,
       });
+
+      if (resend) {
+        try {
+          const fileBuffer = fs.readFileSync(req.file.path);
+          const isVideo = mediaType === "video";
+          const fileExtension = path.extname(req.file.originalname) || (isVideo ? ".mp4" : ".jpg");
+          const fileName = `submission-${submission.id}${fileExtension}`;
+          
+          await resend.emails.send({
+            from: "Photo Portal <onboarding@resend.dev>",
+            to: "buyerpics@gowithbigtime.com",
+            subject: `New ${isVideo ? "Video" : "Photo"} Submission from ${clientName} (${companyName})`,
+            html: `
+              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                <h2 style="color: #2563EB;">New Submission from Photo Portal</h2>
+                <div style="background: #f9fafb; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                  <p><strong>Client:</strong> ${clientName}</p>
+                  <p><strong>Company:</strong> ${companyName}</p>
+                  <p><strong>Type:</strong> ${isVideo ? "Video" : "Photo"}</p>
+                  ${caption ? `<p><strong>Caption:</strong> ${caption}</p>` : "<p><em>No caption provided</em></p>"}
+                </div>
+                <p style="color: #6b7280; font-size: 14px;">The ${isVideo ? "video" : "photo"} is attached to this email.</p>
+              </div>
+            `,
+            attachments: [
+              {
+                filename: fileName,
+                content: fileBuffer,
+              },
+            ],
+          });
+          console.log("Email sent successfully for submission:", submission.id);
+        } catch (emailError) {
+          console.error("Failed to send email notification:", emailError);
+        }
+      } else {
+        console.log("Email not sent - RESEND_API_KEY not configured");
+      }
 
       res.status(201).json(submission);
     } catch (error) {

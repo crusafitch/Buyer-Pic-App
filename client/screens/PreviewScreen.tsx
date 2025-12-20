@@ -122,7 +122,7 @@ export default function PreviewScreen() {
         }
       }
 
-      await addSubmission(finalMediaUri, overlayId, caption, mediaType);
+      await addSubmission(finalMediaUri, overlayId, caption, mediaType, profile.username, profile.companyName);
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       navigation.navigate("Success");
