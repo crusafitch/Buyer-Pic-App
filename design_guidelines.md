@@ -85,7 +85,7 @@ The core action (taking and submitting photos) is positioned in the center tab w
 - **Layout**:
   - Large photo preview with overlay applied
   - Optional: Add caption text field
-  - Bottom: "Submit to Agency" button (primary, full-width)
+  - Bottom: "Submit to Big Time" button (primary, full-width)
 - **Safe Area**: Top (headerHeight + Spacing.xl), Bottom (tabBarHeight + Spacing.xl)
 - **Form**: Submit button at bottom of scrollable content
 

@@ -229,7 +229,7 @@ export default function PreviewScreen() {
         {isSubmitting ? (
           <ActivityIndicator color="#FFFFFF" size="small" />
         ) : (
-          "Submit to Agency"
+          "Submit to Big Time"
         )}
       </Button>
     </KeyboardAwareScrollViewCompat>
