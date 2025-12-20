@@ -196,7 +196,7 @@ function PermissionRequest({
           type="body"
           style={[styles.permissionText, { color: theme.textSecondary }]}
         >
-          Photo Portal needs camera access to take photos and videos.
+          Buyer Pic Portal needs camera access to take photos and videos.
         </ThemedText>
         {canOpenSettings ? (
           Platform.OS !== "web" ? (

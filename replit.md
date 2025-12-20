@@ -1,8 +1,8 @@
-# Photo Portal - Replit.md
+# Big Time Buyer Pic Portal - Replit.md
 
 ## Overview
 
-Photo Portal is a B2B mobile application built with React Native (Expo) that allows advertising agency clients to submit photos and videos with branded overlays (photos only). The app features a camera interface for capturing photos/videos, overlay selection, AI-powered caption generation, preview/caption functionality, and a gallery to track submission history. It follows a client-server architecture with an Express.js backend.
+Big Time Buyer Pic Portal is a B2B mobile application built with React Native (Expo) that allows advertising agency clients to submit photos and videos with branded overlays (photos only). The app features a camera interface for capturing photos/videos, overlay selection, AI-powered caption generation, preview/caption functionality, and a gallery to track submission history. It follows a client-server architecture with an Express.js backend.
 
 ## User Preferences
 

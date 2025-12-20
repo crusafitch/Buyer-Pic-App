@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Big Time Photo Portal",
+    "name": "Big Time Buyer Pic Portal",
     "slug": "photo-portal",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -42,13 +42,13 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Allow Photo Portal to access your camera to take customer photos."
+          "cameraPermission": "Allow Buyer Pic Portal to access your camera to take customer photos."
         }
       ],
       [
         "expo-image-picker",
         {
-          "photosPermission": "Allow Photo Portal to access your photos to select customer images."
+          "photosPermission": "Allow Buyer Pic Portal to access your photos to select customer images."
         }
       ]
     ],

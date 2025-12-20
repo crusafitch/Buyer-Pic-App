@@ -366,7 +366,7 @@ export default function ProfileScreen() {
           type="small"
           style={[styles.version, { color: theme.textSecondary }]}
         >
-          Big Time Photo Portal v1.0.0
+          Big Time Buyer Pic Portal v1.0.0
         </ThemedText>
       </KeyboardAwareScrollViewCompat>
     </ThemedView>
