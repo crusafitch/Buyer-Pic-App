@@ -6,6 +6,7 @@ import {
   Platform,
   Linking,
   ActivityIndicator,
+  Dimensions,
 } from "react-native";
 import { CameraView, useCameraPermissions, CameraType } from "expo-camera";
 import * as ImagePicker from "expo-image-picker";
@@ -35,6 +36,33 @@ type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 type MediaMode = "photo" | "video";
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
+
+function SafeAreaOverlay({ topInset, bottomOffset }: { topInset: number; bottomOffset: number }) {
+  const squareSize = SCREEN_WIDTH - Spacing.xl * 2;
+  const availableHeight = SCREEN_HEIGHT - topInset - bottomOffset;
+  const verticalOffset = topInset + (availableHeight - squareSize) / 2;
+  
+  return (
+    <View style={StyleSheet.absoluteFill} pointerEvents="none">
+      <View style={[styles.safeAreaMaskTop, { height: verticalOffset }]} />
+      <View style={[styles.safeAreaMaskBottom, { top: verticalOffset + squareSize }]} />
+      <View style={[styles.safeAreaMaskLeft, { top: verticalOffset, height: squareSize }]} />
+      <View style={[styles.safeAreaMaskRight, { top: verticalOffset, height: squareSize }]} />
+      <View 
+        style={[
+          styles.safeAreaSquare, 
+          { 
+            top: verticalOffset, 
+            left: Spacing.xl, 
+            width: squareSize, 
+            height: squareSize 
+          }
+        ]} 
+      />
+    </View>
+  );
+}
 
 function CaptureButton({ 
   onPress, 
@@ -390,6 +418,11 @@ export default function CreateScreen() {
         flash={flash ? "on" : "off"}
         mode={mode === "video" ? "video" : "picture"}
       >
+        <SafeAreaOverlay 
+          topInset={insets.top + Spacing.lg + 44 + Spacing.lg} 
+          bottomOffset={tabBarHeight + Spacing["3xl"] + 180} 
+        />
+        
         <View style={[styles.topControls, { top: insets.top + Spacing.lg }]}>
           <Pressable
             style={styles.controlButton}
@@ -615,5 +648,37 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginBottom: Spacing.xl,
     paddingHorizontal: Spacing.xl,
+  },
+  safeAreaMaskTop: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: "rgba(0,0,0,0.5)",
+  },
+  safeAreaMaskBottom: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0,0,0,0.5)",
+  },
+  safeAreaMaskLeft: {
+    position: "absolute",
+    left: 0,
+    width: Spacing.xl,
+    backgroundColor: "rgba(0,0,0,0.5)",
+  },
+  safeAreaMaskRight: {
+    position: "absolute",
+    right: 0,
+    width: Spacing.xl,
+    backgroundColor: "rgba(0,0,0,0.5)",
+  },
+  safeAreaSquare: {
+    position: "absolute",
+    borderWidth: 2,
+    borderColor: "rgba(255,255,255,0.6)",
+    borderRadius: BorderRadius.sm,
   },
 });
