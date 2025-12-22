@@ -111,11 +111,10 @@ export default function MainTabNavigator() {
 
 const styles = StyleSheet.create({
   createIconContainer: {
-    width: 48,
-    height: 48,
+    width: 44,
+    height: 44,
     borderRadius: BorderRadius.full,
     alignItems: "center",
     justifyContent: "center",
-    marginTop: -Spacing.lg,
   },
 });
