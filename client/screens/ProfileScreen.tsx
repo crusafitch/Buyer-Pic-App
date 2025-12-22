@@ -99,7 +99,11 @@ export default function ProfileScreen() {
   const postedCount = submissions.filter((s) => s.status === "posted").length;
 
   const handleContactSupport = async () => {
-    await WebBrowser.openBrowserAsync("mailto:support@bigtimeadvertising.com");
+    try {
+      await Linking.openURL("mailto:support@gowithbigtime.com");
+    } catch (error) {
+      Alert.alert("Email Not Available", "Please email us at support@gowithbigtime.com");
+    }
   };
 
   const handlePickPhoto = async () => {
