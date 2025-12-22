@@ -104,9 +104,9 @@ export default function ProfileScreen() {
 
   const handleContactSupport = async () => {
     try {
-      await Linking.openURL("mailto:support@gowithbigtime.com");
+      await Linking.openURL("mailto:info@gowithbigtime.com");
     } catch (error) {
-      Alert.alert("Email Not Available", "Please email us at support@gowithbigtime.com");
+      Alert.alert("Email Not Available", "Please email us at info@gowithbigtime.com");
     }
   };
 
