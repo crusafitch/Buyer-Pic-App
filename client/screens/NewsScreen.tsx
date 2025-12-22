@@ -47,13 +47,9 @@ export default function NewsScreen() {
     staleTime: 5 * 60 * 1000,
   });
 
-  const handleOpenPost = async (url: string) => {
+  const handleOpenPost = (url: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    try {
-      await Linking.openURL(url);
-    } catch (error) {
-      // Silent fail if can't open
-    }
+    Linking.openURL(url);
   };
 
   const formatDate = (dateString: string) => {
