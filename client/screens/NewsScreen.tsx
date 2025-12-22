@@ -74,38 +74,36 @@ export default function NewsScreen() {
   };
 
   const renderPost = ({ item }: { item: BlogPost }) => (
-    <Pressable onPress={() => handleOpenPost(item.link)}>
-      <Card style={styles.postCard}>
-        {item.imageUrl ? (
-          <Image
-            source={{ uri: item.imageUrl }}
-            style={styles.postImage}
-            contentFit="cover"
-          />
-        ) : null}
-        <View style={styles.postContent}>
-          <View style={styles.postHeader}>
-            <ThemedText type="h4" style={styles.postTitle} numberOfLines={2}>
-              {item.title}
-            </ThemedText>
-            <Feather name="external-link" size={16} color={theme.textSecondary} />
-          </View>
-          <ThemedText
-            type="body"
-            style={[styles.postDescription, { color: theme.textSecondary }]}
-            numberOfLines={3}
-          >
-            {stripHtml(item.description)}
+    <Card style={styles.postCard} onPress={() => handleOpenPost(item.link)}>
+      {item.imageUrl ? (
+        <Image
+          source={{ uri: item.imageUrl }}
+          style={styles.postImage}
+          contentFit="cover"
+        />
+      ) : null}
+      <View style={styles.postContent}>
+        <View style={styles.postHeader}>
+          <ThemedText type="h4" style={styles.postTitle} numberOfLines={2}>
+            {item.title}
           </ThemedText>
-          <ThemedText
-            type="small"
-            style={[styles.postDate, { color: theme.textSecondary }]}
-          >
-            {formatDate(item.pubDate)}
-          </ThemedText>
+          <Feather name="external-link" size={16} color={theme.textSecondary} />
         </View>
-      </Card>
-    </Pressable>
+        <ThemedText
+          type="body"
+          style={[styles.postDescription, { color: theme.textSecondary }]}
+          numberOfLines={3}
+        >
+          {stripHtml(item.description)}
+        </ThemedText>
+        <ThemedText
+          type="small"
+          style={[styles.postDate, { color: theme.textSecondary }]}
+        >
+          {formatDate(item.pubDate)}
+        </ThemedText>
+      </View>
+    </Card>
   );
 
   if (isLoading) {
