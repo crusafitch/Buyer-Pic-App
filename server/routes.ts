@@ -323,6 +323,39 @@ Analyze the image and create an engaging caption that highlights the positive cu
     }
   });
 
+  // Helper function to fetch article image from a blog post URL
+  async function fetchArticleImage(url: string): Promise<string> {
+    try {
+      const response = await fetch(url, {
+        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; BigTimeBuyerPic/1.0)' }
+      });
+      if (!response.ok) return "";
+      const html = await response.text();
+      
+      // First try og:image
+      let imageUrl = html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i)?.[1] ||
+                     html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i)?.[1];
+      if (imageUrl && imageUrl.trim()) return imageUrl.startsWith('http') ? imageUrl : `https://www.gowithbigtime.com${imageUrl}`;
+      
+      // Look for article image with class img-fluid (Big Time blog format)
+      const articleImg = html.match(/<img[^>]+class=["'][^"']*img-fluid[^"']*rounded[^"']*["'][^>]+src=["']([^"']+)["']/i)?.[1] ||
+                        html.match(/<img[^>]+src=["']([^"']+)["'][^>]+class=["'][^"']*img-fluid[^"']*rounded[^"']*["']/i)?.[1];
+      if (articleImg) {
+        return articleImg.startsWith('http') ? articleImg : `https://www.gowithbigtime.com${articleImg}`;
+      }
+      
+      // Look for any uploads/files image (blog content images)
+      const uploadsImg = html.match(/src=["']([^"']*\/uploads\/files\/[^"']+\.(jpg|jpeg|png|webp))[^"']*["']/i)?.[1];
+      if (uploadsImg) {
+        return uploadsImg.startsWith('http') ? uploadsImg : `https://www.gowithbigtime.com${uploadsImg}`;
+      }
+      
+      return "";
+    } catch {
+      return "";
+    }
+  }
+
   // News/Blog RSS feed endpoint
   app.get("/api/news", async (_req: Request, res: Response) => {
     try {
@@ -355,34 +388,21 @@ Analyze the image and create an engaging caption that highlights the positive cu
                            itemXml.match(/<description><!\[CDATA\[([\s\S]*?)\]\]><\/description>|<description>([\s\S]*?)<\/description>/)?.[2] || "";
         const pubDate = itemXml.match(/<pubDate>([\s\S]*?)<\/pubDate>/)?.[1] || "";
         
-        // Try to extract image from various RSS formats
-        let imageUrl = "";
-        // Check for enclosure (common RSS image format)
-        const enclosure = itemXml.match(/<enclosure[^>]+url=["']([^"']+)["'][^>]*type=["']image[^"']*["']/i)?.[1] ||
-                         itemXml.match(/<enclosure[^>]+type=["']image[^"']*["'][^>]+url=["']([^"']+)["']/i)?.[1];
-        if (enclosure) imageUrl = enclosure;
-        
-        // Check for media:content or media:thumbnail
-        if (!imageUrl) {
-          const mediaContent = itemXml.match(/<media:content[^>]+url=["']([^"']+)["']/i)?.[1] ||
-                              itemXml.match(/<media:thumbnail[^>]+url=["']([^"']+)["']/i)?.[1];
-          if (mediaContent) imageUrl = mediaContent;
-        }
-        
-        // Check for image in description (img tag)
-        if (!imageUrl) {
-          const imgInDesc = description.match(/<img[^>]+src=["']([^"']+)["']/i)?.[1];
-          if (imgInDesc) imageUrl = imgInDesc;
-        }
-        
         items.push({
           title: title.trim(),
           link: link.trim(),
           description: description.trim(),
           pubDate: pubDate.trim(),
-          imageUrl: imageUrl.trim(),
+          imageUrl: "",
         });
       }
+      
+      // Fetch article images for each post in parallel
+      const imagePromises = items.map(item => fetchArticleImage(item.link));
+      const images = await Promise.all(imagePromises);
+      items.forEach((item, index) => {
+        item.imageUrl = images[index];
+      });
       
       res.json(items);
     } catch (error) {
