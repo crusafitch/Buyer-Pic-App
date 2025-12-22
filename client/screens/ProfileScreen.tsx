@@ -8,8 +8,11 @@ import {
   Alert,
   Linking,
 } from "react-native";
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useHeaderHeight } from "@react-navigation/elements";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
+import type { RootStackParamList } from "@/navigation/RootStackNavigator";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import * as WebBrowser from "expo-web-browser";
@@ -84,6 +87,7 @@ function SettingsRow({
 
 export default function ProfileScreen() {
   const { theme } = useTheme();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const headerHeight = useHeaderHeight();
   const tabBarHeight = useBottomTabBarHeight();
   const { submissions } = useSubmissions();
@@ -104,6 +108,10 @@ export default function ProfileScreen() {
     } catch (error) {
       Alert.alert("Email Not Available", "Please email us at support@gowithbigtime.com");
     }
+  };
+
+  const handleOpenHelp = () => {
+    navigation.navigate("Help");
   };
 
   const handlePickPhoto = async () => {
@@ -355,7 +363,7 @@ export default function ProfileScreen() {
           <SettingsRow
             icon="help-circle"
             label="Help & FAQ"
-            onPress={handleContactSupport}
+            onPress={handleOpenHelp}
           />
           <SettingsRow
             icon="mail"

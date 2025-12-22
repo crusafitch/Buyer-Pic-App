@@ -4,6 +4,7 @@ import MainTabNavigator from "@/navigation/MainTabNavigator";
 import OverlaySelectScreen from "@/screens/OverlaySelectScreen";
 import PreviewScreen from "@/screens/PreviewScreen";
 import SuccessModal from "@/screens/SuccessModal";
+import HelpScreen from "@/screens/HelpScreen";
 import { useScreenOptions } from "@/hooks/useScreenOptions";
 
 export type RootStackParamList = {
@@ -11,6 +12,7 @@ export type RootStackParamList = {
   OverlaySelect: { mediaUri: string; mediaType: "photo" | "video" };
   Preview: { mediaUri: string; mediaType: "photo" | "video"; overlayId: string | null; overlayUrl?: string };
   Success: undefined;
+  Help: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -46,6 +48,13 @@ export default function RootStackNavigator() {
           presentation: "transparentModal",
           headerShown: false,
           animation: "fade",
+        }}
+      />
+      <Stack.Screen
+        name="Help"
+        component={HelpScreen}
+        options={{
+          headerTitle: "Help & Tips",
         }}
       />
     </Stack.Navigator>
