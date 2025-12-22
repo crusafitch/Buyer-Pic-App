@@ -42,6 +42,10 @@ export default function MainTabNavigator() {
           borderTopLeftRadius: BorderRadius.xl,
           borderTopRightRadius: BorderRadius.xl,
           paddingTop: Spacing.sm,
+          height: 90,
+        },
+        tabBarLabelStyle: {
+          marginTop: 6,
         },
         tabBarBackground: () => null,
       }}
