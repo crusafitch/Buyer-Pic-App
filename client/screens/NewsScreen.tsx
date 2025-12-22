@@ -50,17 +50,9 @@ export default function NewsScreen() {
   const handleOpenPost = async (url: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     try {
-      await WebBrowser.openBrowserAsync(url, {
-        dismissButtonStyle: "close",
-        presentationStyle: WebBrowser.WebBrowserPresentationStyle.FULL_SCREEN,
-      });
+      await Linking.openURL(url);
     } catch (error) {
-      // Fallback to Linking if WebBrowser fails
-      try {
-        await Linking.openURL(url);
-      } catch {
-        // Silent fail
-      }
+      // Silent fail if can't open
     }
   };
 
