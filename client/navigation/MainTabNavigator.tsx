@@ -32,25 +32,18 @@ export default function MainTabNavigator() {
         headerStyle: {
           backgroundColor: theme.backgroundRoot,
         },
-        tabBarActiveTintColor: theme.tabIconSelected,
-        tabBarInactiveTintColor: theme.tabIconDefault,
+        tabBarActiveTintColor: "#FFFFFF",
+        tabBarInactiveTintColor: "rgba(255, 255, 255, 0.6)",
         tabBarStyle: {
           position: "absolute",
-          backgroundColor: Platform.select({
-            ios: "transparent",
-            android: theme.backgroundRoot,
-          }),
+          backgroundColor: Colors.light.primary,
           borderTopWidth: 0,
           elevation: 0,
+          borderTopLeftRadius: BorderRadius.xl,
+          borderTopRightRadius: BorderRadius.xl,
+          paddingTop: Spacing.sm,
         },
-        tabBarBackground: () =>
-          Platform.OS === "ios" ? (
-            <BlurView
-              intensity={100}
-              tint={isDark ? "dark" : "light"}
-              style={StyleSheet.absoluteFill}
-            />
-          ) : null,
+        tabBarBackground: () => null,
       }}
     >
       <Tab.Screen
@@ -78,12 +71,12 @@ export default function MainTabNavigator() {
                 styles.createIconContainer,
                 {
                   backgroundColor: focused
-                    ? Colors.light.primary
-                    : Colors.light.secondary,
+                    ? "#FFFFFF"
+                    : "rgba(255, 255, 255, 0.3)",
                 },
               ]}
             >
-              <Feather name="camera" size={size - 4} color="#FFFFFF" />
+              <Feather name="camera" size={size - 4} color={Colors.light.primary} />
             </View>
           ),
         }}
