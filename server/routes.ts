@@ -209,13 +209,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
             : `http://localhost:5000`;
           const mediaFullUrl = `${baseUrl}${mediaUrl}`;
           
-          const chatMessage = {
-            text: `*New ${isVideo ? "Video" : "Photo"} Submission*\n\n` +
-              `*Client:* ${clientName}\n` +
-              `*Company:* ${companyName}\n` +
-              `*Type:* ${isVideo ? "Video" : "Photo"}\n` +
-              `*Caption:* ${caption || "No caption provided"}\n\n` +
-              `View media: ${mediaFullUrl}`,
+          const chatMessage = isVideo ? {
+            text: `*New Video Submission*\n\n` +
+              `*Submitted by:* ${clientName}\n` +
+              `*Dealership:* ${companyName}\n` +
+              `*AI Caption:* ${caption || "No caption provided"}\n\n` +
+              `View video: ${mediaFullUrl}`,
+          } : {
+            cards: [{
+              header: {
+                title: "New Photo Submission",
+                subtitle: `From ${clientName} at ${companyName}`,
+              },
+              sections: [
+                {
+                  widgets: [
+                    {
+                      image: {
+                        imageUrl: mediaFullUrl,
+                      },
+                    },
+                  ],
+                },
+                {
+                  widgets: [
+                    {
+                      keyValue: {
+                        topLabel: "Submitted by",
+                        content: clientName,
+                      },
+                    },
+                    {
+                      keyValue: {
+                        topLabel: "Dealership",
+                        content: companyName,
+                      },
+                    },
+                    {
+                      keyValue: {
+                        topLabel: "AI Caption",
+                        content: caption || "No caption provided",
+                        contentMultiline: true,
+                      },
+                    },
+                  ],
+                },
+                {
+                  widgets: [
+                    {
+                      buttons: [
+                        {
+                          textButton: {
+                            text: "VIEW FULL IMAGE",
+                            onClick: {
+                              openLink: {
+                                url: mediaFullUrl,
+                              },
+                            },
+                          },
+                        },
+                      ],
+                    },
+                  ],
+                },
+              ],
+            }],
           };
 
           const chatResponse = await fetch(googleChatWebhookUrl, {
