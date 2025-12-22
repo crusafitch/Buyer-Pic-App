@@ -105,7 +105,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     const token = authHeader.substring(7);
     try {
-      const decoded = jwt.verify(token, JWT_SECRET) as { id: string; email: string; name: string; dealership: string };
+      const decoded = jwt.verify(token, JWT_SECRET!) as unknown as { id: string; email: string; name: string; dealership: string };
       req.user = decoded;
       next();
     } catch (error) {
