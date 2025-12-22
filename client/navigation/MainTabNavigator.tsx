@@ -53,8 +53,8 @@ export default function MainTabNavigator() {
           title: "Submissions",
           headerTitle: () => <BrandHeader />,
           tabBarLabel: "Gallery",
-          tabBarIcon: ({ color, size }) => (
-            <Feather name="image" size={size} color={color} />
+          tabBarIcon: ({ focused, size }) => (
+            <Feather name="image" size={size} color={focused ? "#FFFFFF" : "rgba(255, 255, 255, 0.7)"} />
           ),
         }}
       />
@@ -88,8 +88,8 @@ export default function MainTabNavigator() {
           title: "News",
           headerTitle: () => <BrandHeader />,
           tabBarLabel: "News",
-          tabBarIcon: ({ color, size }) => (
-            <Feather name="file-text" size={size} color={color} />
+          tabBarIcon: ({ focused, size }) => (
+            <Feather name="file-text" size={size} color={focused ? "#FFFFFF" : "rgba(255, 255, 255, 0.7)"} />
           ),
         }}
       />
@@ -100,8 +100,8 @@ export default function MainTabNavigator() {
           title: "Profile",
           headerTitle: "Profile",
           tabBarLabel: "Profile",
-          tabBarIcon: ({ color, size }) => (
-            <Feather name="user" size={size} color={color} />
+          tabBarIcon: ({ focused, size }) => (
+            <Feather name="user" size={size} color={focused ? "#FFFFFF" : "rgba(255, 255, 255, 0.7)"} />
           ),
         }}
       />
