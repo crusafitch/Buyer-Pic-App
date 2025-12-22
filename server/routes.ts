@@ -192,6 +192,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const clientName = req.body.clientName || "Unknown Client";
       const companyName = req.body.companyName || "Unknown Company";
       
+      console.log("Submission received - clientName:", req.body.clientName, "companyName:", req.body.companyName);
+      
       const submission = await storage.createSubmission({
         photoUrl: mediaUrl,
         overlayId: req.body.overlayId || null,
