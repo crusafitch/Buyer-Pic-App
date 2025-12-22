@@ -100,7 +100,7 @@ export default function MainTabNavigator() {
         component={ProfileScreen}
         options={{
           title: "Profile",
-          headerTitle: "Profile",
+          headerTitle: () => <BrandHeader />,
           tabBarLabel: "Profile",
           tabBarIcon: ({ focused, size }) => (
             <Feather name="user" size={size} color="#FFFFFF" />
