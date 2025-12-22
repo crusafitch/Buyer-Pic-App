@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
   RefreshControl,
 } from "react-native";
+import { Image } from "expo-image";
 import { useQuery } from "@tanstack/react-query";
 import { Feather } from "@expo/vector-icons";
 import * as WebBrowser from "expo-web-browser";
@@ -25,6 +26,7 @@ interface BlogPost {
   link: string;
   description: string;
   pubDate: string;
+  imageUrl?: string;
 }
 
 export default function NewsScreen() {
@@ -69,25 +71,34 @@ export default function NewsScreen() {
   const renderPost = ({ item }: { item: BlogPost }) => (
     <Pressable onPress={() => handleOpenPost(item.link)}>
       <Card style={styles.postCard}>
-        <View style={styles.postHeader}>
-          <ThemedText type="h4" style={styles.postTitle} numberOfLines={2}>
-            {item.title}
+        {item.imageUrl ? (
+          <Image
+            source={{ uri: item.imageUrl }}
+            style={styles.postImage}
+            contentFit="cover"
+          />
+        ) : null}
+        <View style={styles.postContent}>
+          <View style={styles.postHeader}>
+            <ThemedText type="h4" style={styles.postTitle} numberOfLines={2}>
+              {item.title}
+            </ThemedText>
+            <Feather name="external-link" size={16} color={theme.textSecondary} />
+          </View>
+          <ThemedText
+            type="body"
+            style={[styles.postDescription, { color: theme.textSecondary }]}
+            numberOfLines={3}
+          >
+            {stripHtml(item.description)}
           </ThemedText>
-          <Feather name="external-link" size={16} color={theme.textSecondary} />
+          <ThemedText
+            type="small"
+            style={[styles.postDate, { color: theme.textSecondary }]}
+          >
+            {formatDate(item.pubDate)}
+          </ThemedText>
         </View>
-        <ThemedText
-          type="body"
-          style={[styles.postDescription, { color: theme.textSecondary }]}
-          numberOfLines={3}
-        >
-          {stripHtml(item.description)}
-        </ThemedText>
-        <ThemedText
-          type="small"
-          style={[styles.postDate, { color: theme.textSecondary }]}
-        >
-          {formatDate(item.pubDate)}
-        </ThemedText>
       </Card>
     </Pressable>
   );
@@ -241,6 +252,13 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.full,
   },
   postCard: {
+    overflow: "hidden",
+  },
+  postImage: {
+    width: "100%",
+    height: 180,
+  },
+  postContent: {
     padding: Spacing.lg,
   },
   postHeader: {

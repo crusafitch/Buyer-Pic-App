@@ -341,6 +341,7 @@ Analyze the image and create an engaging caption that highlights the positive cu
         link: string;
         description: string;
         pubDate: string;
+        imageUrl: string;
       }> = [];
       
       // Simple RSS parsing
@@ -354,11 +355,32 @@ Analyze the image and create an engaging caption that highlights the positive cu
                            itemXml.match(/<description><!\[CDATA\[([\s\S]*?)\]\]><\/description>|<description>([\s\S]*?)<\/description>/)?.[2] || "";
         const pubDate = itemXml.match(/<pubDate>([\s\S]*?)<\/pubDate>/)?.[1] || "";
         
+        // Try to extract image from various RSS formats
+        let imageUrl = "";
+        // Check for enclosure (common RSS image format)
+        const enclosure = itemXml.match(/<enclosure[^>]+url=["']([^"']+)["'][^>]*type=["']image[^"']*["']/i)?.[1] ||
+                         itemXml.match(/<enclosure[^>]+type=["']image[^"']*["'][^>]+url=["']([^"']+)["']/i)?.[1];
+        if (enclosure) imageUrl = enclosure;
+        
+        // Check for media:content or media:thumbnail
+        if (!imageUrl) {
+          const mediaContent = itemXml.match(/<media:content[^>]+url=["']([^"']+)["']/i)?.[1] ||
+                              itemXml.match(/<media:thumbnail[^>]+url=["']([^"']+)["']/i)?.[1];
+          if (mediaContent) imageUrl = mediaContent;
+        }
+        
+        // Check for image in description (img tag)
+        if (!imageUrl) {
+          const imgInDesc = description.match(/<img[^>]+src=["']([^"']+)["']/i)?.[1];
+          if (imgInDesc) imageUrl = imgInDesc;
+        }
+        
         items.push({
           title: title.trim(),
           link: link.trim(),
           description: description.trim(),
           pubDate: pubDate.trim(),
+          imageUrl: imageUrl.trim(),
         });
       }
       
