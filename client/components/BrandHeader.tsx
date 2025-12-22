@@ -24,12 +24,13 @@ const styles = StyleSheet.create({
   container: {
     alignItems: "center",
     justifyContent: "center",
+    paddingVertical: Spacing.xs,
   },
   broughtByText: {
-    marginBottom: Spacing.xs,
+    marginBottom: 2,
   },
   logo: {
-    width: 120,
-    height: 40,
+    width: 100,
+    height: 36,
   },
 });

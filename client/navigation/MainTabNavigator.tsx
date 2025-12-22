@@ -54,7 +54,7 @@ export default function MainTabNavigator() {
           headerTitle: () => <BrandHeader />,
           tabBarLabel: "Gallery",
           tabBarIcon: ({ focused, size }) => (
-            <Feather name="image" size={size} color={focused ? "#FFFFFF" : "rgba(255, 255, 255, 0.7)"} />
+            <Feather name="image" size={size} color="#FFFFFF" />
           ),
         }}
       />
@@ -70,13 +70,11 @@ export default function MainTabNavigator() {
               style={[
                 styles.createIconContainer,
                 {
-                  backgroundColor: focused
-                    ? "#FFFFFF"
-                    : "rgba(255, 255, 255, 0.3)",
+                  backgroundColor: Colors.light.secondary,
                 },
               ]}
             >
-              <Feather name="camera" size={size - 4} color={Colors.light.primary} />
+              <Feather name="camera" size={size - 4} color="#FFFFFF" />
             </View>
           ),
         }}
@@ -89,7 +87,7 @@ export default function MainTabNavigator() {
           headerTitle: () => <BrandHeader />,
           tabBarLabel: "News",
           tabBarIcon: ({ focused, size }) => (
-            <Feather name="file-text" size={size} color={focused ? "#FFFFFF" : "rgba(255, 255, 255, 0.7)"} />
+            <Feather name="file-text" size={size} color="#FFFFFF" />
           ),
         }}
       />
@@ -101,7 +99,7 @@ export default function MainTabNavigator() {
           headerTitle: "Profile",
           tabBarLabel: "Profile",
           tabBarIcon: ({ focused, size }) => (
-            <Feather name="user" size={size} color={focused ? "#FFFFFF" : "rgba(255, 255, 255, 0.7)"} />
+            <Feather name="user" size={size} color="#FFFFFF" />
           ),
         }}
       />
