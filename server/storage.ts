@@ -1,9 +1,10 @@
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and } from "drizzle-orm";
 import { db } from "./db";
 import {
   users,
   overlays,
   submissions,
+  userOverlays,
   type User,
   type InsertUser,
   type Overlay,
@@ -14,8 +15,16 @@ import {
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
-  getUserByUsername(username: string): Promise<User | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  updateUser(id: string, user: Partial<InsertUser>): Promise<User | undefined>;
+  deleteUser(id: string): Promise<boolean>;
+  getAllUsers(): Promise<User[]>;
+  
+  getUserOverlays(userId: string): Promise<Overlay[]>;
+  assignOverlayToUser(userId: string, overlayId: string): Promise<void>;
+  removeOverlayFromUser(userId: string, overlayId: string): Promise<void>;
+  setUserOverlays(userId: string, overlayIds: string[]): Promise<void>;
   
   getOverlays(): Promise<Overlay[]>;
   getActiveOverlays(): Promise<Overlay[]>;
@@ -36,14 +45,60 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.username, username));
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.email, email));
     return user;
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
     const [user] = await db.insert(users).values(insertUser).returning();
     return user;
+  }
+
+  async updateUser(id: string, userData: Partial<InsertUser>): Promise<User | undefined> {
+    const [updated] = await db
+      .update(users)
+      .set({ ...userData, updatedAt: new Date() })
+      .where(eq(users.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteUser(id: string): Promise<boolean> {
+    const result = await db.delete(users).where(eq(users.id, id)).returning();
+    return result.length > 0;
+  }
+
+  async getAllUsers(): Promise<User[]> {
+    return db.select().from(users).orderBy(desc(users.createdAt));
+  }
+
+  async getUserOverlays(userId: string): Promise<Overlay[]> {
+    const assignments = await db
+      .select({ overlay: overlays })
+      .from(userOverlays)
+      .innerJoin(overlays, eq(userOverlays.overlayId, overlays.id))
+      .where(and(eq(userOverlays.userId, userId), eq(overlays.isActive, true)));
+    return assignments.map(a => a.overlay);
+  }
+
+  async assignOverlayToUser(userId: string, overlayId: string): Promise<void> {
+    await db.insert(userOverlays).values({ userId, overlayId }).onConflictDoNothing();
+  }
+
+  async removeOverlayFromUser(userId: string, overlayId: string): Promise<void> {
+    await db.delete(userOverlays).where(
+      and(eq(userOverlays.userId, userId), eq(userOverlays.overlayId, overlayId))
+    );
+  }
+
+  async setUserOverlays(userId: string, overlayIds: string[]): Promise<void> {
+    await db.delete(userOverlays).where(eq(userOverlays.userId, userId));
+    if (overlayIds.length > 0) {
+      await db.insert(userOverlays).values(
+        overlayIds.map(overlayId => ({ userId, overlayId }))
+      );
+    }
   }
 
   async getOverlays(): Promise<Overlay[]> {

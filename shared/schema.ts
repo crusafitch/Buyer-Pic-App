@@ -7,8 +7,23 @@ export const users = pgTable("users", {
   id: varchar("id")
     .primaryKey()
     .default(sql`gen_random_uuid()`),
-  username: text("username").notNull().unique(),
+  email: text("email").notNull().unique(),
   password: text("password").notNull(),
+  name: text("name").notNull(),
+  dealership: text("dealership").notNull(),
+  phone: text("phone"),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const userOverlays = pgTable("user_overlays", {
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  overlayId: varchar("overlay_id").notNull().references(() => overlays.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
 export const overlays = pgTable("overlays", {
@@ -36,8 +51,17 @@ export const submissions = pgTable("submissions", {
 });
 
 export const insertUserSchema = createInsertSchema(users).pick({
-  username: true,
+  email: true,
   password: true,
+  name: true,
+  dealership: true,
+  phone: true,
+  isActive: true,
+});
+
+export const insertUserOverlaySchema = createInsertSchema(userOverlays).pick({
+  userId: true,
+  overlayId: true,
 });
 
 export const insertOverlaySchema = createInsertSchema(overlays).pick({
@@ -56,6 +80,9 @@ export const insertSubmissionSchema = createInsertSchema(submissions).pick({
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
+
+export type InsertUserOverlay = z.infer<typeof insertUserOverlaySchema>;
+export type UserOverlay = typeof userOverlays.$inferSelect;
 
 export type InsertOverlay = z.infer<typeof insertOverlaySchema>;
 export type Overlay = typeof overlays.$inferSelect;

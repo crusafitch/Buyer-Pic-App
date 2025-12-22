@@ -1,12 +1,21 @@
-import type { Express, Request, Response } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "node:http";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
 import OpenAI from "openai";
 import { Resend } from "resend";
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
 import { storage } from "./storage";
 import { insertOverlaySchema, insertSubmissionSchema } from "@shared/schema";
+
+const JWT_SECRET = process.env.SESSION_SECRET;
+const ADMIN_API_KEY = process.env.ADMIN_API_KEY;
+
+interface AuthRequest extends Request {
+  user?: { id: string; email: string; name: string; dealership: string };
+}
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 const googleChatWebhookUrl = process.env.GOOGLE_CHAT_WEBHOOK_URL || null;
@@ -77,6 +86,240 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.setHeader("Cache-Control", "public, max-age=31536000");
     next();
   }, require("express").static(uploadsDir));
+
+  const verifyAdminApiKey = (req: Request, res: Response, next: NextFunction) => {
+    const apiKey = req.headers["x-admin-api-key"];
+    if (!ADMIN_API_KEY) {
+      return res.status(500).json({ error: "Admin API key not configured" });
+    }
+    if (apiKey !== ADMIN_API_KEY) {
+      return res.status(401).json({ error: "Invalid admin API key" });
+    }
+    next();
+  };
+
+  const verifyToken = (req: AuthRequest, res: Response, next: NextFunction) => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith("Bearer ")) {
+      return res.status(401).json({ error: "No token provided" });
+    }
+    const token = authHeader.substring(7);
+    try {
+      const decoded = jwt.verify(token, JWT_SECRET) as { id: string; email: string; name: string; dealership: string };
+      req.user = decoded;
+      next();
+    } catch (error) {
+      return res.status(401).json({ error: "Invalid token" });
+    }
+  };
+
+  app.post("/api/auth/login", async (req: Request, res: Response) => {
+    try {
+      if (!JWT_SECRET) {
+        return res.status(500).json({ error: "Authentication not configured" });
+      }
+      const { email, password } = req.body;
+      if (!email || !password) {
+        return res.status(400).json({ error: "Email and password are required" });
+      }
+
+      const user = await storage.getUserByEmail(email.toLowerCase());
+      if (!user) {
+        return res.status(401).json({ error: "Invalid email or password" });
+      }
+
+      if (!user.isActive) {
+        return res.status(401).json({ error: "Account is deactivated" });
+      }
+
+      const isValidPassword = await bcrypt.compare(password, user.password);
+      if (!isValidPassword) {
+        return res.status(401).json({ error: "Invalid email or password" });
+      }
+
+      const token = jwt.sign(
+        { id: user.id, email: user.email, name: user.name, dealership: user.dealership },
+        JWT_SECRET,
+        { expiresIn: "30d" }
+      );
+
+      res.json({
+        token,
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          dealership: user.dealership,
+          phone: user.phone,
+        },
+      });
+    } catch (error) {
+      console.error("Login error:", error);
+      res.status(500).json({ error: "Login failed" });
+    }
+  });
+
+  app.get("/api/auth/me", verifyToken, async (req: AuthRequest, res: Response) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+      const user = await storage.getUser(req.user.id);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      const overlays = await storage.getUserOverlays(user.id);
+      res.json({
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          dealership: user.dealership,
+          phone: user.phone,
+        },
+        overlays,
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch user" });
+    }
+  });
+
+  app.post("/api/admin/users", verifyAdminApiKey, async (req: Request, res: Response) => {
+    try {
+      const { email, password, name, dealership, phone, isActive } = req.body;
+      if (!email || !password || !name || !dealership) {
+        return res.status(400).json({ error: "Email, password, name, and dealership are required" });
+      }
+
+      const existingUser = await storage.getUserByEmail(email.toLowerCase());
+      if (existingUser) {
+        return res.status(409).json({ error: "User with this email already exists" });
+      }
+
+      const hashedPassword = await bcrypt.hash(password, 10);
+      const user = await storage.createUser({
+        email: email.toLowerCase(),
+        password: hashedPassword,
+        name,
+        dealership,
+        phone: phone || null,
+        isActive: isActive !== false,
+      });
+
+      res.status(201).json({
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        dealership: user.dealership,
+        phone: user.phone,
+        isActive: user.isActive,
+      });
+    } catch (error) {
+      console.error("Create user error:", error);
+      res.status(500).json({ error: "Failed to create user" });
+    }
+  });
+
+  app.put("/api/admin/users/:id", verifyAdminApiKey, async (req: Request, res: Response) => {
+    try {
+      const { email, password, name, dealership, phone, isActive } = req.body;
+      const updateData: Record<string, unknown> = {};
+
+      if (email) updateData.email = email.toLowerCase();
+      if (password) updateData.password = await bcrypt.hash(password, 10);
+      if (name) updateData.name = name;
+      if (dealership) updateData.dealership = dealership;
+      if (phone !== undefined) updateData.phone = phone;
+      if (isActive !== undefined) updateData.isActive = isActive;
+
+      const user = await storage.updateUser(req.params.id, updateData);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      res.json({
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        dealership: user.dealership,
+        phone: user.phone,
+        isActive: user.isActive,
+      });
+    } catch (error) {
+      console.error("Update user error:", error);
+      res.status(500).json({ error: "Failed to update user" });
+    }
+  });
+
+  app.delete("/api/admin/users/:id", verifyAdminApiKey, async (req: Request, res: Response) => {
+    try {
+      const deleted = await storage.deleteUser(req.params.id);
+      if (!deleted) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete user" });
+    }
+  });
+
+  app.get("/api/admin/users", verifyAdminApiKey, async (_req: Request, res: Response) => {
+    try {
+      const users = await storage.getAllUsers();
+      res.json(users.map(u => ({
+        id: u.id,
+        email: u.email,
+        name: u.name,
+        dealership: u.dealership,
+        phone: u.phone,
+        isActive: u.isActive,
+        createdAt: u.createdAt,
+      })));
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch users" });
+    }
+  });
+
+  app.get("/api/admin/users/:id", verifyAdminApiKey, async (req: Request, res: Response) => {
+    try {
+      const user = await storage.getUser(req.params.id);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      const overlays = await storage.getUserOverlays(user.id);
+      res.json({
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        dealership: user.dealership,
+        phone: user.phone,
+        isActive: user.isActive,
+        overlays: overlays.map(o => o.id),
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch user" });
+    }
+  });
+
+  app.put("/api/admin/users/:id/overlays", verifyAdminApiKey, async (req: Request, res: Response) => {
+    try {
+      const { overlayIds } = req.body;
+      if (!Array.isArray(overlayIds)) {
+        return res.status(400).json({ error: "overlayIds must be an array" });
+      }
+
+      const user = await storage.getUser(req.params.id);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      await storage.setUserOverlays(user.id, overlayIds);
+      res.json({ success: true, overlayIds });
+    } catch (error) {
+      console.error("Set user overlays error:", error);
+      res.status(500).json({ error: "Failed to set user overlays" });
+    }
+  });
 
   app.get("/api/overlays", async (_req: Request, res: Response) => {
     try {

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   StyleSheet,
@@ -26,6 +26,7 @@ import { useTheme } from "@/hooks/useTheme";
 import { BorderRadius, Spacing } from "@/constants/theme";
 import { useSubmissions } from "@/hooks/useSubmissions";
 import { useProfile } from "@/hooks/useProfile";
+import { useAuth } from "@/hooks/useAuth";
 import { PoweredByFooter } from "@/components/PoweredByFooter";
 
 function SettingsRow({
@@ -92,6 +93,8 @@ export default function ProfileScreen() {
   const tabBarHeight = useBottomTabBarHeight();
   const { submissions } = useSubmissions();
   const { profile, updateUsername, updateCompanyName, updatePhoto } = useProfile();
+  const { logout, user, biometricEnabled, enableBiometric, disableBiometric, checkBiometricAvailable } = useAuth();
+  const [canUseBiometric, setCanUseBiometric] = useState(false);
 
   const [isEditingName, setIsEditingName] = useState(false);
   const [isEditingCompany, setIsEditingCompany] = useState(false);
@@ -101,6 +104,41 @@ export default function ProfileScreen() {
   const totalSubmissions = submissions.length;
   const pendingCount = submissions.filter((s) => s.status === "pending").length;
   const postedCount = submissions.filter((s) => s.status === "posted").length;
+
+  useEffect(() => {
+    const checkBiometric = async () => {
+      const available = await checkBiometricAvailable();
+      setCanUseBiometric(available);
+    };
+    checkBiometric();
+  }, [checkBiometricAvailable]);
+
+  const handleToggleBiometric = async () => {
+    Haptics.selectionAsync();
+    if (biometricEnabled) {
+      await disableBiometric();
+    } else {
+      await enableBiometric();
+    }
+  };
+
+  const handleLogout = () => {
+    Alert.alert(
+      "Sign Out",
+      "Are you sure you want to sign out?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Sign Out",
+          style: "destructive",
+          onPress: async () => {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            await logout();
+          },
+        },
+      ]
+    );
+  };
 
   const handleContactSupport = async () => {
     const emailUrl = "mailto:info@gowithbigtime.com?subject=Big%20Time%20Buyer%20Pic%20Portal%20Support";
@@ -372,6 +410,21 @@ export default function ProfileScreen() {
             type="small"
             style={[styles.sectionTitle, { color: theme.textSecondary }]}
           >
+            SECURITY
+          </ThemedText>
+          {canUseBiometric ? (
+            <SettingsRow
+              icon="smartphone"
+              label={biometricEnabled ? "Disable Face ID / Touch ID" : "Enable Face ID / Touch ID"}
+              onPress={handleToggleBiometric}
+              showChevron={false}
+            />
+          ) : null}
+
+          <ThemedText
+            type="small"
+            style={[styles.sectionTitle, { color: theme.textSecondary }]}
+          >
             SUPPORT
           </ThemedText>
           <SettingsRow
@@ -383,6 +436,13 @@ export default function ProfileScreen() {
             icon="mail"
             label="Contact Support"
             onPress={handleContactSupport}
+          />
+          <SettingsRow
+            icon="log-out"
+            label="Sign Out"
+            onPress={handleLogout}
+            showChevron={false}
+            destructive
           />
         </View>
 

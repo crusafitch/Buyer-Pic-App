@@ -59,7 +59,7 @@ assets/          # Images, icons, overlays
 ## External Dependencies
 
 ### Third-Party Services & APIs
-- **Authentication** (Planned): Apple Sign-In, Google Sign-In for client identification
+- **Authentication**: Email/password login with JWT tokens (30-day expiration), biometric authentication (Face ID/Touch ID) support after first login. Tokens stored in SecureStore. External admin portal manages user accounts via protected API endpoints.
 - **Camera/Media**: `expo-camera` for photo/video capture, `expo-image-picker` for gallery access
 - **Video Playback**: `expo-video` for video preview and playback in gallery
 - **Image Processing**: `react-native-view-shot` for capturing composited photo+overlay
@@ -84,6 +84,11 @@ assets/          # Images, icons, overlays
 
 ## Recent Changes
 
+- Added complete authentication system with email/password login and JWT tokens
+- Added biometric authentication (Face ID/Touch ID) support with toggle in Profile screen
+- Added login screen with app branding and secure password input
+- Added logout functionality to profile screen with confirmation dialog
+- Created admin API endpoints for external portal to manage users and overlay assignments
 - Added video recording and playback support (photos and videos can now be captured and submitted)
 - Added AI-powered caption generation for photos using OpenAI Vision API
 - Videos display with play button overlay in gallery and can be played in fullscreen modal
