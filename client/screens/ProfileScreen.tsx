@@ -103,10 +103,24 @@ export default function ProfileScreen() {
   const postedCount = submissions.filter((s) => s.status === "posted").length;
 
   const handleContactSupport = async () => {
+    const emailUrl = "mailto:info@gowithbigtime.com?subject=Big%20Time%20Buyer%20Pic%20Portal%20Support";
     try {
-      await Linking.openURL("mailto:info@gowithbigtime.com");
+      const canOpen = await Linking.canOpenURL(emailUrl);
+      if (canOpen) {
+        await Linking.openURL(emailUrl);
+      } else {
+        Alert.alert(
+          "Email Not Available",
+          "Please email us at info@gowithbigtime.com",
+          [{ text: "OK" }]
+        );
+      }
     } catch (error) {
-      Alert.alert("Email Not Available", "Please email us at info@gowithbigtime.com");
+      Alert.alert(
+        "Email Not Available", 
+        "Please email us at info@gowithbigtime.com",
+        [{ text: "OK" }]
+      );
     }
   };
 
