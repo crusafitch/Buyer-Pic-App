@@ -1,7 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getApiUrl, apiRequest } from "@/lib/query-client";
-import { File } from "expo-file-system";
-import { Platform } from "react-native";
 
 export interface Submission {
   id: string;
@@ -41,16 +39,16 @@ export function useSubmissions() {
       const baseUrl = getApiUrl();
       const formData = new FormData();
 
-      if (Platform.OS === "web") {
-        const response = await fetch(mediaUri);
-        const blob = await response.blob();
-        const extension = mediaType === "video" ? "mp4" : "jpg";
-        const mimeType = mediaType === "video" ? "video/mp4" : "image/jpeg";
-        formData.append("media", blob, `submission.${extension}`);
-      } else {
-        const file = new File(mediaUri);
-        formData.append("media", file as unknown as Blob);
-      }
+      const extension = mediaType === "video" ? "mp4" : "jpg";
+      const mimeType = mediaType === "video" ? "video/mp4" : "image/jpeg";
+      
+      const mediaFile = {
+        uri: mediaUri,
+        name: `submission.${extension}`,
+        type: mimeType,
+      } as unknown as Blob;
+      
+      formData.append("media", mediaFile);
       formData.append("mediaType", mediaType);
 
       if (overlayId) {
