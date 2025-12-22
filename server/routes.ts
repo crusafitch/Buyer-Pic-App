@@ -9,6 +9,7 @@ import { storage } from "./storage";
 import { insertOverlaySchema, insertSubmissionSchema } from "@shared/schema";
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
+const googleChatWebhookUrl = process.env.GOOGLE_CHAT_WEBHOOK_URL || null;
 
 const openai = new OpenAI({
   apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
@@ -199,10 +200,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
         mediaType,
       });
 
-      if (resend) {
+      const isVideo = mediaType === "video";
+      
+      if (googleChatWebhookUrl) {
+        try {
+          const baseUrl = process.env.REPLIT_DEV_DOMAIN 
+            ? `https://${process.env.REPLIT_DEV_DOMAIN}:5000`
+            : `http://localhost:5000`;
+          const mediaFullUrl = `${baseUrl}${mediaUrl}`;
+          
+          const chatMessage = {
+            text: `*New ${isVideo ? "Video" : "Photo"} Submission*\n\n` +
+              `*Client:* ${clientName}\n` +
+              `*Company:* ${companyName}\n` +
+              `*Type:* ${isVideo ? "Video" : "Photo"}\n` +
+              `*Caption:* ${caption || "No caption provided"}\n\n` +
+              `View media: ${mediaFullUrl}`,
+          };
+
+          const chatResponse = await fetch(googleChatWebhookUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(chatMessage),
+          });
+
+          if (chatResponse.ok) {
+            console.log("Google Chat notification sent for submission:", submission.id);
+          } else {
+            console.error("Failed to send Google Chat notification:", await chatResponse.text());
+          }
+        } catch (chatError) {
+          console.error("Failed to send Google Chat notification:", chatError);
+        }
+      } else if (resend) {
         try {
           const fileBuffer = fs.readFileSync(req.file.path);
-          const isVideo = mediaType === "video";
           const fileExtension = path.extname(req.file.originalname) || (isVideo ? ".mp4" : ".jpg");
           const fileName = `submission-${submission.id}${fileExtension}`;
           
@@ -234,7 +266,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.error("Failed to send email notification:", emailError);
         }
       } else {
-        console.log("Email not sent - RESEND_API_KEY not configured");
+        console.log("No notification method configured (GOOGLE_CHAT_WEBHOOK_URL or RESEND_API_KEY)");
       }
 
       res.status(201).json(submission);
