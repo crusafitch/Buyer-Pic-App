@@ -12,11 +12,11 @@ export function PoweredByFooter() {
   const { theme } = useTheme();
 
   const openBestUsedCars = () => {
-    Linking.openURL("https://www.bestusedcars.com");
+    Linking.openURL("https://getbestusedcars.com/");
   };
 
   const openDaraCoreAI = () => {
-    Linking.openURL("https://www.daracoreai.com");
+    Linking.openURL("https://daracoreai.com/");
   };
 
   return (
