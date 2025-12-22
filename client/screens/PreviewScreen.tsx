@@ -48,17 +48,19 @@ export default function PreviewScreen() {
   const [isGeneratingCaption, setIsGeneratingCaption] = useState(false);
   const viewShotRef = useRef<ViewShot>(null);
   const { addSubmission } = useSubmissions();
-  const { profile } = useProfile();
+  const { profile, isLoading: isProfileLoading } = useProfile();
 
   const videoPlayer = useVideoPlayer(mediaType === "video" ? mediaUri : null, player => {
     player.loop = false;
   });
 
   const handleGenerateCaption = async () => {
-    if (isGeneratingCaption) return;
+    if (isGeneratingCaption || isProfileLoading) return;
 
     setIsGeneratingCaption(true);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+    console.log("Generating caption with profile:", profile.username, profile.companyName);
 
     try {
       const formData = new FormData();
@@ -117,10 +119,12 @@ export default function PreviewScreen() {
   };
 
   const handleSubmit = async () => {
-    if (isSubmitting) return;
+    if (isSubmitting || isProfileLoading) return;
 
     setIsSubmitting(true);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+    console.log("Submitting with profile:", profile.username, profile.companyName);
 
     try {
       let finalMediaUri = mediaUri;
