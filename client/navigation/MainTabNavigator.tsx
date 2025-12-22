@@ -29,6 +29,8 @@ export default function MainTabNavigator() {
       screenOptions={{
         headerTitleAlign: "center",
         headerTintColor: theme.text,
+        headerLeft: () => null,
+        headerRight: () => null,
         headerStyle: {
           backgroundColor: theme.backgroundRoot,
         },

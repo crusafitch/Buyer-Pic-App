@@ -6,6 +6,7 @@ import {
   Pressable,
   ActivityIndicator,
   RefreshControl,
+  Linking,
 } from "react-native";
 import { Image } from "expo-image";
 import { useQuery } from "@tanstack/react-query";
@@ -48,7 +49,16 @@ export default function NewsScreen() {
 
   const handleOpenPost = async (url: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    await WebBrowser.openBrowserAsync(url);
+    try {
+      const supported = await Linking.canOpenURL(url);
+      if (supported) {
+        await Linking.openURL(url);
+      } else {
+        await WebBrowser.openBrowserAsync(url);
+      }
+    } catch (error) {
+      await WebBrowser.openBrowserAsync(url);
+    }
   };
 
   const formatDate = (dateString: string) => {
