@@ -1,5 +1,5 @@
 import React from "react";
-import { View, StyleSheet } from "react-native";
+import { View, StyleSheet, Pressable, Linking } from "react-native";
 import { Image } from "expo-image";
 import { Spacing } from "@/constants/theme";
 import { ThemedText } from "@/components/ThemedText";
@@ -9,14 +9,18 @@ const bigtimeLogo = require("@assets/images/bigtime-logo.png");
 
 export function BrandHeader() {
   const { theme } = useTheme();
+
+  const handlePress = () => {
+    Linking.openURL("https://www.gowithbigtime.com");
+  };
   
   return (
-    <View style={styles.container}>
+    <Pressable style={styles.container} onPress={handlePress}>
       <ThemedText type="small" style={[styles.broughtByText, { color: theme.textSecondary }]}>
         Brought to you by
       </ThemedText>
       <Image source={bigtimeLogo} style={styles.logo} contentFit="contain" />
-    </View>
+    </Pressable>
   );
 }
 

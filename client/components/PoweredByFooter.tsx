@@ -1,5 +1,5 @@
 import React from "react";
-import { View, StyleSheet } from "react-native";
+import { View, StyleSheet, Pressable, Linking } from "react-native";
 import { Image } from "expo-image";
 import { ThemedText } from "@/components/ThemedText";
 import { useTheme } from "@/hooks/useTheme";
@@ -11,15 +11,27 @@ const daraCoreAILogo = require("@assets/images/daracoreai-logo.png");
 export function PoweredByFooter() {
   const { theme } = useTheme();
 
+  const openBestUsedCars = () => {
+    Linking.openURL("https://www.bestusedcars.com");
+  };
+
+  const openDaraCoreAI = () => {
+    Linking.openURL("https://www.daracoreai.com");
+  };
+
   return (
     <View style={styles.container}>
       <ThemedText type="small" style={[styles.poweredByText, { color: theme.textSecondary }]}>
         Powered by
       </ThemedText>
       <View style={styles.logosContainer}>
-        <Image source={bestUsedCarsLogo} style={styles.partnerLogo} contentFit="contain" />
+        <Pressable onPress={openBestUsedCars}>
+          <Image source={bestUsedCarsLogo} style={styles.partnerLogo} contentFit="contain" />
+        </Pressable>
         <View style={[styles.divider, { backgroundColor: theme.border }]} />
-        <Image source={daraCoreAILogo} style={styles.partnerLogo} contentFit="contain" />
+        <Pressable onPress={openDaraCoreAI}>
+          <Image source={daraCoreAILogo} style={styles.partnerLogo} contentFit="contain" />
+        </Pressable>
       </View>
     </View>
   );
