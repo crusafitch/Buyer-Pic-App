@@ -330,7 +330,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/admin/overlays", async (_req: Request, res: Response) => {
+  app.get("/api/admin/overlays", verifyAdminApiKey, async (_req: Request, res: Response) => {
     try {
       const overlays = await storage.getOverlays();
       res.json(overlays);
@@ -351,39 +351,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/admin/overlays", uploadOverlay.single("image"), async (req: Request, res: Response) => {
+  app.post("/api/admin/overlays", verifyAdminApiKey, async (req: Request, res: Response) => {
     try {
-      if (!req.file) {
-        return res.status(400).json({ error: "Image file is required" });
-      }
-
-      const name = req.body.name;
+      const { name, imageUrl, isActive } = req.body;
+      
       if (!name) {
-        fs.unlinkSync(req.file.path);
         return res.status(400).json({ error: "Name is required" });
       }
+      if (!imageUrl) {
+        return res.status(400).json({ error: "Image URL is required" });
+      }
 
-      const imageUrl = `/uploads/overlays/${req.file.filename}`;
       const overlay = await storage.createOverlay({
         name,
         imageUrl,
-        isActive: req.body.isActive !== "false",
+        isActive: isActive !== false,
       });
 
       res.status(201).json(overlay);
     } catch (error) {
-      if (req.file) {
-        fs.unlinkSync(req.file.path);
-      }
+      console.error("Create overlay error:", error);
       res.status(500).json({ error: "Failed to create overlay" });
     }
   });
 
-  app.put("/api/admin/overlays/:id", async (req: Request, res: Response) => {
+  app.put("/api/admin/overlays/:id", verifyAdminApiKey, async (req: Request, res: Response) => {
     try {
-      const { name, isActive } = req.body;
+      const { name, imageUrl, isActive } = req.body;
       const overlay = await storage.updateOverlay(req.params.id, {
         name,
+        imageUrl,
         isActive,
       });
       if (!overlay) {
@@ -395,16 +392,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/admin/overlays/:id", async (req: Request, res: Response) => {
+  app.delete("/api/admin/overlays/:id", verifyAdminApiKey, async (req: Request, res: Response) => {
     try {
       const overlay = await storage.getOverlay(req.params.id);
       if (!overlay) {
         return res.status(404).json({ error: "Overlay not found" });
-      }
-
-      const imagePath = path.resolve(process.cwd(), overlay.imageUrl.substring(1));
-      if (fs.existsSync(imagePath)) {
-        fs.unlinkSync(imagePath);
       }
 
       await storage.deleteOverlay(req.params.id);
