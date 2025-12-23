@@ -44,6 +44,7 @@ export default function PreviewScreen() {
   const { mediaUri, mediaType, overlayId, overlayUrl } = route.params;
 
   const [caption, setCaption] = useState("");
+  const [eventContext, setEventContext] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGeneratingCaption, setIsGeneratingCaption] = useState(false);
   const viewShotRef = useRef<ViewShot>(null);
@@ -94,6 +95,9 @@ export default function PreviewScreen() {
       
       formData.append("companyName", profile.companyName);
       formData.append("userName", profile.username);
+      if (eventContext.trim()) {
+        formData.append("context", eventContext.trim());
+      }
 
       const apiUrl = new URL("/api/generate-caption", getApiUrl());
       const res = await fetch(apiUrl.toString(), {
@@ -187,6 +191,30 @@ export default function PreviewScreen() {
         </ViewShot>
       )}
 
+      <View style={styles.contextContainer}>
+        <ThemedText
+          type="body"
+          style={[styles.label, { color: theme.textSecondary }]}
+        >
+          Event or Promotion (for AI caption)
+        </ThemedText>
+        <TextInput
+          style={[
+            styles.contextInput,
+            {
+              backgroundColor: theme.backgroundDefault,
+              color: theme.text,
+              borderColor: theme.border,
+            },
+          ]}
+          placeholder="e.g., Red White and Blue Sales Event, Memorial Day Sale..."
+          placeholderTextColor={theme.textSecondary}
+          value={eventContext}
+          onChangeText={setEventContext}
+          maxLength={100}
+        />
+      </View>
+
       <View style={styles.captionContainer}>
         <View style={styles.captionHeader}>
           <ThemedText
@@ -274,6 +302,16 @@ const styles = StyleSheet.create({
   },
   overlayImage: {
     ...StyleSheet.absoluteFillObject,
+  },
+  contextContainer: {
+    marginBottom: Spacing.lg,
+  },
+  contextInput: {
+    borderWidth: 1,
+    borderRadius: BorderRadius.sm,
+    padding: Spacing.md,
+    fontSize: 16,
+    marginTop: Spacing.sm,
   },
   captionContainer: {
     marginBottom: Spacing.xl,
