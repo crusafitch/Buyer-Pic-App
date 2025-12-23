@@ -610,12 +610,13 @@ Guidelines:
 - Highlight the customer experience and brand positively
 - Include a subtle call-to-action when appropriate
 - Do not use hashtags unless specifically requested
-- Make the caption suitable for Instagram, Facebook, or LinkedIn`;
+- Make the caption suitable for Instagram, Facebook, or LinkedIn
+- IMPORTANT: If an event, promotion, or sale is mentioned, you MUST incorporate it prominently into the caption`;
 
       const userPrompt = `Generate a social media caption for this customer photo.
 ${companyName ? `Business: ${companyName}` : ""}
 ${userName ? `Submitted by: ${userName}` : ""}
-${context ? `Additional context: ${context}` : ""}
+${context ? `IMPORTANT - This photo is for: ${context}. Make sure to mention this event/promotion in the caption!` : ""}
 
 Analyze the image and create an engaging caption that highlights the positive customer experience.`;
 
