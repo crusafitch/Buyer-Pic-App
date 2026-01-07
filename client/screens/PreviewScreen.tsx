@@ -13,6 +13,7 @@ import {
 import { Image } from "expo-image";
 import { useVideoPlayer, VideoView } from "expo-video";
 import * as VideoThumbnails from "expo-video-thumbnails";
+import { File } from "expo-file-system";
 import { useHeaderHeight } from "@react-navigation/elements";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
@@ -58,15 +59,27 @@ export default function PreviewScreen() {
   const [selectedTextId, setSelectedTextId] = useState<string | null>(null);
   const [isAddingText, setIsAddingText] = useState(false);
   const [newTextValue, setNewTextValue] = useState("");
+  const [videoThumbnail, setVideoThumbnail] = useState<string | null>(null);
+  const [isEditingVideoOverlay, setIsEditingVideoOverlay] = useState(false);
+  const [isProcessingVideo, setIsProcessingVideo] = useState(false);
   const viewShotRef = useRef<ViewShot>(null);
   const { addSubmission } = useSubmissions();
   const { profile, isLoading: isProfileLoading } = useProfile();
 
   const selectedText = textOverlays.find(t => t.id === selectedTextId);
+  const hasVideoOverlays = overlayUrl || textOverlays.length > 0;
 
   const videoPlayer = useVideoPlayer(mediaType === "video" ? mediaUri : null, player => {
     player.loop = false;
   });
+
+  React.useEffect(() => {
+    if (mediaType === "video") {
+      VideoThumbnails.getThumbnailAsync(mediaUri, { time: 1000 })
+        .then(result => setVideoThumbnail(result.uri))
+        .catch(err => console.warn("Failed to get video thumbnail:", err));
+    }
+  }, [mediaUri, mediaType]);
 
   const handleAddText = () => {
     if (!newTextValue.trim()) return;
@@ -193,6 +206,42 @@ export default function PreviewScreen() {
     }
   };
 
+  const processVideoWithOverlays = async (): Promise<string> => {
+    const formData = new FormData();
+    
+    if (Platform.OS === "web") {
+      const response = await fetch(mediaUri);
+      const blob = await response.blob();
+      formData.append("video", blob, "video.mp4");
+    } else {
+      const videoFile = new File(mediaUri);
+      formData.append("video", videoFile as unknown as Blob);
+    }
+    
+    if (overlayUrl) {
+      formData.append("overlayUrl", overlayUrl);
+    }
+    
+    if (textOverlays.length > 0) {
+      formData.append("textOverlays", JSON.stringify(textOverlays));
+    }
+    
+    formData.append("videoSize", String(PREVIEW_SIZE));
+    
+    const apiUrl = new URL("/api/process-video", getApiUrl());
+    const res = await fetch(apiUrl.toString(), {
+      method: "POST",
+      body: formData,
+    });
+    
+    if (!res.ok) {
+      throw new Error("Failed to process video");
+    }
+    
+    const data = await res.json();
+    return `${getApiUrl()}${data.processedVideoUrl}`;
+  };
+
   const handleSubmit = async () => {
     if (isSubmitting || isProfileLoading) return;
 
@@ -212,6 +261,16 @@ export default function PreviewScreen() {
           }
         } catch (captureError) {
           console.warn("Could not capture composite image:", captureError);
+        }
+      } else if (mediaType === "video" && hasVideoOverlays) {
+        setIsProcessingVideo(true);
+        try {
+          finalMediaUri = await processVideoWithOverlays();
+        } catch (processError) {
+          console.error("Failed to process video:", processError);
+          Alert.alert("Processing Error", "Failed to apply overlays to video. Submitting original video.");
+        } finally {
+          setIsProcessingVideo(false);
         }
       }
 
@@ -237,13 +296,62 @@ export default function PreviewScreen() {
       ]}
     >
       {mediaType === "video" ? (
-        <View style={styles.previewContainer}>
-          <VideoView
-            player={videoPlayer}
-            style={styles.videoPlayer}
-            contentFit="cover"
-            nativeControls={true}
-          />
+        <View style={styles.previewWrapper}>
+          {isEditingVideoOverlay && videoThumbnail ? (
+            <GestureHandlerRootView style={{ flex: 1 }}>
+              <View style={styles.previewContainer}>
+                <Image source={{ uri: videoThumbnail }} style={styles.previewImage} />
+                {overlayUrl ? (
+                  <Image
+                    source={{ uri: overlayUrl }}
+                    style={styles.overlayImage}
+                    contentFit="cover"
+                  />
+                ) : null}
+                {textOverlays.map(overlay => (
+                  <DraggableText
+                    key={overlay.id}
+                    overlay={overlay}
+                    onPositionChange={handlePositionChange}
+                    onSelect={setSelectedTextId}
+                    isSelected={overlay.id === selectedTextId}
+                    containerSize={PREVIEW_SIZE}
+                  />
+                ))}
+              </View>
+              <Pressable
+                style={[styles.editOverlayButton, { backgroundColor: Colors.light.primary }]}
+                onPress={() => setIsEditingVideoOverlay(false)}
+              >
+                <Feather name="play" size={16} color="#FFFFFF" />
+                <ThemedText style={styles.editOverlayButtonText}>Preview Video</ThemedText>
+              </Pressable>
+            </GestureHandlerRootView>
+          ) : (
+            <View>
+              <View style={styles.previewContainer}>
+                <VideoView
+                  player={videoPlayer}
+                  style={styles.videoPlayer}
+                  contentFit="cover"
+                  nativeControls={true}
+                />
+                {hasVideoOverlays ? (
+                  <View style={styles.overlayIndicator}>
+                    <Feather name="layers" size={14} color="#FFFFFF" />
+                    <ThemedText style={styles.overlayIndicatorText}>Overlays will be applied</ThemedText>
+                  </View>
+                ) : null}
+              </View>
+              <Pressable
+                style={[styles.editOverlayButton, { backgroundColor: theme.backgroundDefault, borderColor: theme.border, borderWidth: 1 }]}
+                onPress={() => setIsEditingVideoOverlay(true)}
+              >
+                <Feather name="edit-2" size={16} color={theme.text} />
+                <ThemedText style={{ marginLeft: Spacing.sm }}>Edit Overlays</ThemedText>
+              </Pressable>
+            </View>
+          )}
         </View>
       ) : (
         <GestureHandlerRootView style={styles.previewWrapper}>
@@ -274,7 +382,7 @@ export default function PreviewScreen() {
         </GestureHandlerRootView>
       )}
 
-      {mediaType === "photo" ? (
+      {(mediaType === "photo" || isEditingVideoOverlay) ? (
         <View style={styles.textControlsSection}>
           {isAddingText ? (
             <View style={styles.addTextRow}>
@@ -452,9 +560,14 @@ export default function PreviewScreen() {
         </ThemedText>
       </View>
 
-      <Button onPress={handleSubmit} disabled={isSubmitting}>
-        {isSubmitting ? (
-          <ActivityIndicator color="#FFFFFF" size="small" />
+      <Button onPress={handleSubmit} disabled={isSubmitting || isProcessingVideo}>
+        {isSubmitting || isProcessingVideo ? (
+          <View style={{ flexDirection: "row", alignItems: "center" }}>
+            <ActivityIndicator color="#FFFFFF" size="small" />
+            {isProcessingVideo ? (
+              <ThemedText style={{ color: "#FFFFFF", marginLeft: Spacing.sm }}>Processing video...</ThemedText>
+            ) : null}
+          </View>
         ) : (
           "Submit to Big Time"
         )}
@@ -487,6 +600,37 @@ const styles = StyleSheet.create({
   },
   overlayImage: {
     ...StyleSheet.absoluteFillObject,
+  },
+  editOverlayButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: Spacing.md,
+    borderRadius: BorderRadius.sm,
+    marginTop: Spacing.sm,
+  },
+  editOverlayButtonText: {
+    color: "#FFFFFF",
+    marginLeft: Spacing.sm,
+    fontWeight: "600",
+  },
+  overlayIndicator: {
+    position: "absolute",
+    bottom: Spacing.sm,
+    left: Spacing.sm,
+    right: Spacing.sm,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(0,0,0,0.6)",
+    paddingVertical: Spacing.xs,
+    paddingHorizontal: Spacing.sm,
+    borderRadius: BorderRadius.sm,
+  },
+  overlayIndicatorText: {
+    color: "#FFFFFF",
+    fontSize: 12,
+    marginLeft: Spacing.xs,
   },
   textControlsSection: {
     marginBottom: Spacing.lg,

@@ -94,3 +94,4 @@ assets/          # Images, icons, overlays
 - Videos display with play button overlay in gallery and can be played in fullscreen modal
 - Overlays are only available for photos (disabled for videos)
 - Added Instagram Stories-style text overlays: users can add custom text to photos, drag to position, and customize with color picker and font styles (normal/bold/italic)
+- Added video overlay support: PNG overlays and text overlays can now be applied to videos via server-side ffmpeg processing

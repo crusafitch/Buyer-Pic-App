@@ -1,5 +1,7 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "node:http";
+import { exec } from "node:child_process";
+import { promisify } from "node:util";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
@@ -9,6 +11,8 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { storage } from "./storage";
 import { insertOverlaySchema, insertSubmissionSchema } from "@shared/schema";
+
+const execAsync = promisify(exec);
 
 const JWT_SECRET = process.env.SESSION_SECRET;
 const ADMIN_API_KEY = process.env.ADMIN_API_KEY;
@@ -403,6 +407,123 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ error: "Failed to delete overlay" });
+    }
+  });
+
+  const processedVideosDir = path.resolve(uploadsDir, "processed");
+  if (!fs.existsSync(processedVideosDir)) {
+    fs.mkdirSync(processedVideosDir, { recursive: true });
+  }
+
+  app.post("/api/process-video", uploadSubmission.single("video"), async (req: Request, res: Response) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: "Video file is required" });
+      }
+
+      const videoPath = req.file.path;
+      const overlayUrl = req.body.overlayUrl || null;
+      const textOverlays = req.body.textOverlays ? JSON.parse(req.body.textOverlays) : [];
+      const videoSize = parseInt(req.body.videoSize) || 1080;
+
+      const outputFilename = `processed-${Date.now()}.mp4`;
+      const outputPath = path.join(processedVideosDir, outputFilename);
+
+      let filterComplex = "";
+      let inputCount = 1;
+      let inputs = `-i "${videoPath}"`;
+
+      let overlayImagePath = "";
+      if (overlayUrl) {
+        if (overlayUrl.startsWith("http")) {
+          const overlayResponse = await fetch(overlayUrl);
+          if (overlayResponse.ok) {
+            const overlayBuffer = Buffer.from(await overlayResponse.arrayBuffer());
+            overlayImagePath = path.join(processedVideosDir, `overlay-${Date.now()}.png`);
+            fs.writeFileSync(overlayImagePath, overlayBuffer);
+            inputs += ` -i "${overlayImagePath}"`;
+            inputCount++;
+          }
+        } else if (overlayUrl.startsWith("/uploads/")) {
+          const localPath = path.join(process.cwd(), overlayUrl);
+          if (fs.existsSync(localPath)) {
+            overlayImagePath = localPath;
+            inputs += ` -i "${overlayImagePath}"`;
+            inputCount++;
+          }
+        }
+      }
+
+      let currentStream = "[0:v]";
+      let filterParts: string[] = [];
+
+      if (inputCount > 1) {
+        filterParts.push(`${currentStream}[1:v]overlay=0:0[withoverlay]`);
+        currentStream = "[withoverlay]";
+      }
+
+      if (textOverlays.length > 0) {
+        const sanitizeText = (str: string): string => {
+          return str
+            .replace(/\\/g, "\\\\")
+            .replace(/'/g, "'\\''")
+            .replace(/:/g, "\\:")
+            .replace(/\[/g, "\\[")
+            .replace(/\]/g, "\\]")
+            .replace(/;/g, "\\;")
+            .replace(/,/g, "\\,")
+            .slice(0, 100);
+        };
+        
+        const sanitizeColor = (color: string): string => {
+          const validColor = /^#[0-9A-Fa-f]{6}$/.test(color) ? color : "#FFFFFF";
+          return validColor;
+        };
+        
+        const textFilters = textOverlays.map((text: any, index: number) => {
+          const escapedText = sanitizeText(String(text.text || ""));
+          const safeColor = sanitizeColor(String(text.color || "#FFFFFF"));
+          const fontSize = Math.max(8, Math.min(200, Math.round((Number(text.fontSize) || 24) / 1080 * videoSize)));
+          const x = Math.max(0, Math.min(videoSize, Math.round((Number(text.x) || 0) / 1080 * videoSize)));
+          const y = Math.max(0, Math.min(videoSize, Math.round((Number(text.y) || 0) / 1080 * videoSize)));
+          
+          const outputLabel = index === textOverlays.length - 1 ? "[final]" : `[text${index}]`;
+          const inputLabel = index === 0 ? currentStream : `[text${index - 1}]`;
+          
+          return `${inputLabel}drawtext=text='${escapedText}':fontcolor=${safeColor}:fontsize=${fontSize}:x=${x}:y=${y}:shadowcolor=black@0.5:shadowx=1:shadowy=1${outputLabel}`;
+        });
+        
+        filterParts.push(...textFilters);
+        currentStream = "[final]";
+      } else if (inputCount > 1) {
+        currentStream = "[withoverlay]";
+      }
+
+      if (filterParts.length > 0) {
+        filterComplex = `-filter_complex "${filterParts.join(";")}" -map "${currentStream}" -map 0:a?`;
+      }
+
+      const ffmpegCommand = `ffmpeg -y ${inputs} ${filterComplex} -c:v libx264 -preset fast -crf 23 -c:a aac -b:a 128k "${outputPath}"`;
+      
+      console.log("Running ffmpeg command:", ffmpegCommand);
+      
+      await execAsync(ffmpegCommand, { maxBuffer: 100 * 1024 * 1024 });
+
+      fs.unlinkSync(videoPath);
+      
+      if (overlayImagePath && overlayImagePath.startsWith(processedVideosDir)) {
+        try {
+          fs.unlinkSync(overlayImagePath);
+        } catch (e) {
+          console.warn("Failed to clean up temporary overlay:", e);
+        }
+      }
+
+      const processedUrl = `/uploads/processed/${outputFilename}`;
+      res.json({ processedVideoUrl: processedUrl });
+    } catch (error) {
+      console.error("Video processing failed:", error);
+      res.status(500).json({ error: "Failed to process video" });
     }
   });
 
