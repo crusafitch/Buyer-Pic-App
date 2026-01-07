@@ -93,3 +93,4 @@ assets/          # Images, icons, overlays
 - Added AI-powered caption generation for photos using OpenAI Vision API
 - Videos display with play button overlay in gallery and can be played in fullscreen modal
 - Overlays are only available for photos (disabled for videos)
+- Added Instagram Stories-style text overlays: users can add custom text to photos, drag to position, and customize with color picker and font styles (normal/bold/italic)
